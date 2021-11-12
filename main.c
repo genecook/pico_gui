@@ -8,6 +8,14 @@
 #include "hardware/watchdog.h"
 #include "pico/stdlib.h"
 
+//****************************************************************************************
+// example pico lcd program - 'sweep' lines of different colors from corners...
+//****************************************************************************************
+
+// # of pixels in X, Y direction for Waveshare Pico-ResTouch-LCD-2.8:
+#define X_PIXELS 240
+#define Y_PIXELS 320
+
 typedef enum { LEFT_UPPER_CORNER = 0,
 	       RIGHT_UPPER_CORNER,
 	       LEFT_LOWER_CORNER,
@@ -38,8 +46,8 @@ int main(void)
     DOT_PIXEL dot_pixel = DOT_PIXEL_1X1;
 
     while(1) {
-        //GUI_Clear(BLACK);
-	
+      // draw, then erase 'sweeping' set of lines from each corner of display...
+      
       screen_sweep(LEFT_UPPER_CORNER,WHITE,line_style,dot_pixel);
       screen_sweep(LEFT_UPPER_CORNER,BLACK,line_style,dot_pixel);
       
@@ -51,21 +59,10 @@ int main(void)
 
       screen_sweep(LEFT_LOWER_CORNER,GREEN,line_style,dot_pixel);
       screen_sweep(LEFT_LOWER_CORNER,BLACK,line_style,dot_pixel);
-      
-	//Driver_Delay_ms(1000);
     }
 
     return 0;
 }
-
-void line_sweep_inner(int x_start,int y_start,int x_end,int y_end,
-		     COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
-  GUI_DrawLine(x_start,y_start,x_end,y_end,color,line_style,dot_pixel);	
-}
-
-// # of pixels in X, Y direction:
-#define X_PIXELS 240
-#define Y_PIXELS 320
 
 // DCT - transform 'logical' display coordinates (coordinates relative to corner of display)
 //       into physical display coordinates (relative to upper left hand of pico lcd display)
@@ -80,16 +77,19 @@ void DCT(int *px, int *py, int lx, int ly, DISPLAY_CORNERS corner) {
   }
 }
 
+// wrapper for GUI_DrawLine function; used with (commented out) delay
+// during debug...
+
 void draw_line(int x_start, int y_start, int x_end, int y_end,
 		COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
   GUI_DrawLine(x_start,y_start,x_end,y_end,color,line_style,dot_pixel);
   //Driver_Delay_ms(300);
 }
 
+// draw set of lines varying Y coordinate so as to 'sweep' along Y axis...
+
 void side_sweep(DISPLAY_CORNERS corner, int px_start, int py_start, int y_incr,
 		COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
-  // vary end-point of lines from (0, 0) to (0, lastY)...
-
   switch(corner) {
     case LEFT_UPPER_CORNER:
     case RIGHT_LOWER_CORNER:      
@@ -110,10 +110,10 @@ void side_sweep(DISPLAY_CORNERS corner, int px_start, int py_start, int y_incr,
   }
 }
 
+// draw set of lines varying X coordinate so as to 'sweep' along X axis...
+
 void top_sweep(DISPLAY_CORNERS corner, int px_start, int py_start, int x_incr,
 	       COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
-  // then from (lastX, lastY) to (0, lastY)...
-  
   switch(corner) {
     case LEFT_UPPER_CORNER:
     case RIGHT_LOWER_CORNER:
