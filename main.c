@@ -14,7 +14,7 @@ typedef enum { LEFT_UPPER_CORNER = 0,
 	       RIGHT_LOWER_CORNER
 } DISPLAY_CORNERS;  
 
-void line_sweep(DISPLAY_CORNERS corner, COLOR color, LINE_STYLE line_style, DOT_PIXEL dot_pixel);
+void screen_sweep(DISPLAY_CORNERS corner, COLOR color, LINE_STYLE line_style, DOT_PIXEL dot_pixel);
 
 int main(void)
 {
@@ -40,17 +40,17 @@ int main(void)
     while(1) {
         //GUI_Clear(BLACK);
 	
-      line_sweep(LEFT_UPPER_CORNER,WHITE,line_style,dot_pixel);
-      line_sweep(LEFT_UPPER_CORNER,BLACK,line_style,dot_pixel);
+      screen_sweep(LEFT_UPPER_CORNER,WHITE,line_style,dot_pixel);
+      screen_sweep(LEFT_UPPER_CORNER,BLACK,line_style,dot_pixel);
       
-      line_sweep(RIGHT_UPPER_CORNER,RED,line_style,dot_pixel);
-      line_sweep(RIGHT_UPPER_CORNER,BLACK,line_style,dot_pixel);
+      screen_sweep(RIGHT_UPPER_CORNER,RED,line_style,dot_pixel);
+      screen_sweep(RIGHT_UPPER_CORNER,BLACK,line_style,dot_pixel);
       
-      line_sweep(RIGHT_LOWER_CORNER,BLUE,line_style,dot_pixel);
-      line_sweep(RIGHT_LOWER_CORNER,BLACK,line_style,dot_pixel);
+      screen_sweep(RIGHT_LOWER_CORNER,BLUE,line_style,dot_pixel);
+      screen_sweep(RIGHT_LOWER_CORNER,BLACK,line_style,dot_pixel);
 
-      line_sweep(LEFT_LOWER_CORNER,GREEN,line_style,dot_pixel);
-      line_sweep(LEFT_LOWER_CORNER,BLACK,line_style,dot_pixel);
+      screen_sweep(LEFT_LOWER_CORNER,GREEN,line_style,dot_pixel);
+      screen_sweep(LEFT_LOWER_CORNER,BLACK,line_style,dot_pixel);
       
 	//Driver_Delay_ms(1000);
     }
@@ -80,7 +80,29 @@ void DCT(int *px, int *py, int lx, int ly, DISPLAY_CORNERS corner) {
   }
 }
 
-void line_sweep(DISPLAY_CORNERS corner,COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
+void side_sweep(DISPLAY_CORNERS corner, int px_start, int py_start, int y_incr,
+		COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
+  // vary end-point of lines from (0, 0) to (0, lastY)...
+
+  for (int y = 0; y < Y_PIXELS; y += y_incr) {
+     int px_end, py_end;
+     DCT(&px_end,&py_end,X_PIXELS - 1,y,corner);
+     GUI_DrawLine(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
+  }
+}
+
+void top_sweep(DISPLAY_CORNERS corner, int px_start, int py_start, int x_incr,
+	       COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
+  // then from (lastX, lastY) to (0, lastY)...
+  
+  for (int x = X_PIXELS - 1; x >= 0; x -= x_incr) {
+     int px_end, py_end;
+     DCT(&px_end,&py_end,x,Y_PIXELS - 1,corner);
+     GUI_DrawLine(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
+  }
+}
+
+void screen_sweep(DISPLAY_CORNERS corner,COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
   int x_incr = 20;
   int y_incr = 20;
 
@@ -88,20 +110,7 @@ void line_sweep(DISPLAY_CORNERS corner,COLOR color,LINE_STYLE line_style,DOT_PIX
   
   int px_start, py_start;
   DCT(&px_start,&py_start,0,0,corner);
-    
-  // vary end-point of lines from (0, 0) to (0, lastY)...
 
-  for (int y = 0; y < Y_PIXELS; y += y_incr) {
-     int px_end, py_end;
-     DCT(&px_end,&py_end,X_PIXELS - 1,y,corner);
-     line_sweep_inner(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
-  }
-
-  // then from (lastX, lastY) to (0, lastY)...
-  
-  for (int x = X_PIXELS - 1; x >= 0; x -= x_incr) {
-     int px_end, py_end;
-     DCT(&px_end,&py_end,x,Y_PIXELS - 1,corner);
-     line_sweep_inner(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
-  }
+  side_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+  top_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
 }
