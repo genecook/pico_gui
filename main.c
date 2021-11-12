@@ -80,14 +80,33 @@ void DCT(int *px, int *py, int lx, int ly, DISPLAY_CORNERS corner) {
   }
 }
 
+void draw_line(int x_start, int y_start, int x_end, int y_end,
+		COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
+  GUI_DrawLine(x_start,y_start,x_end,y_end,color,line_style,dot_pixel);
+  //Driver_Delay_ms(300);
+}
+
 void side_sweep(DISPLAY_CORNERS corner, int px_start, int py_start, int y_incr,
 		COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
   // vary end-point of lines from (0, 0) to (0, lastY)...
 
-  for (int y = 0; y < Y_PIXELS; y += y_incr) {
-     int px_end, py_end;
-     DCT(&px_end,&py_end,X_PIXELS - 1,y,corner);
-     GUI_DrawLine(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
+  switch(corner) {
+    case LEFT_UPPER_CORNER:
+    case RIGHT_LOWER_CORNER:      
+      for (int y = 0; y < Y_PIXELS; y += y_incr) {
+         int px_end, py_end;
+         DCT(&px_end,&py_end,X_PIXELS - 1,y,corner);
+         draw_line(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);
+      }
+      break;
+    case RIGHT_UPPER_CORNER:
+    case LEFT_LOWER_CORNER:
+      for (int y = Y_PIXELS - 1; y >= 0; y -= y_incr) {
+         int px_end, py_end;
+         DCT(&px_end,&py_end,X_PIXELS - 1,y,corner);
+         draw_line(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
+      }      
+    default: break;
   }
 }
 
@@ -95,10 +114,23 @@ void top_sweep(DISPLAY_CORNERS corner, int px_start, int py_start, int x_incr,
 	       COLOR color,LINE_STYLE line_style,DOT_PIXEL dot_pixel) {
   // then from (lastX, lastY) to (0, lastY)...
   
-  for (int x = X_PIXELS - 1; x >= 0; x -= x_incr) {
-     int px_end, py_end;
-     DCT(&px_end,&py_end,x,Y_PIXELS - 1,corner);
-     GUI_DrawLine(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
+  switch(corner) {
+    case LEFT_UPPER_CORNER:
+    case RIGHT_LOWER_CORNER:
+      for (int x = X_PIXELS - 1; x >= 0; x -= x_incr) {
+         int px_end, py_end;
+         DCT(&px_end,&py_end,x,Y_PIXELS - 1,corner);
+         draw_line(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
+      }
+      break;
+    case RIGHT_UPPER_CORNER:
+    case LEFT_LOWER_CORNER:
+      for (int x = 0; x < X_PIXELS; x += x_incr) {
+         int px_end, py_end;
+         DCT(&px_end,&py_end,x,Y_PIXELS - 1,corner);
+         draw_line(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
+      }
+    default: break;
   }
 }
 
@@ -111,6 +143,24 @@ void screen_sweep(DISPLAY_CORNERS corner,COLOR color,LINE_STYLE line_style,DOT_P
   int px_start, py_start;
   DCT(&px_start,&py_start,0,0,corner);
 
-  side_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
-  top_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+  switch(corner) {
+    case LEFT_UPPER_CORNER:
+      side_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+      top_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+      break;
+    case RIGHT_UPPER_CORNER:
+      top_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+      side_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+      break;
+    case RIGHT_LOWER_CORNER:
+      side_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+      top_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+      break;
+    case LEFT_LOWER_CORNER:
+      top_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+      side_sweep(corner,px_start,py_start,y_incr,color,line_style,dot_pixel);
+      break;
+    default: break;
+  }
+
 }
