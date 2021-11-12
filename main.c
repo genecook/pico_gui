@@ -64,12 +64,8 @@ void line_sweep_inner(int x_start,int y_start,int x_end,int y_end,
 }
 
 // # of pixels in X, Y direction:
-#define X_PIXELS_MAX 240
-#define Y_PIXELS_MAX 320
-
-// last x, y addressible pixel:
-#define LAST_X_PIXEL X_PIXELS_MAX - 1 
-#define LAST_Y_PIXEL Y_PIXELS_MAX - 1
+#define X_PIXELS 240
+#define Y_PIXELS 320
 
 // DCT - transform 'logical' display coordinates (coordinates relative to corner of display)
 //       into physical display coordinates (relative to upper left hand of pico lcd display)
@@ -77,9 +73,9 @@ void line_sweep_inner(int x_start,int y_start,int x_end,int y_end,
 void DCT(int *px, int *py, int lx, int ly, DISPLAY_CORNERS corner) {
   switch(corner) {
     case LEFT_UPPER_CORNER:  *px = lx;                *py = ly;                break;
-    case RIGHT_UPPER_CORNER: *px = LAST_X_PIXEL - lx; *py = ly;                break;
-    case RIGHT_LOWER_CORNER: *px = LAST_X_PIXEL - lx; *py = LAST_Y_PIXEL - ly; break;
-    case LEFT_LOWER_CORNER:  *px = lx;                *py = LAST_Y_PIXEL - ly; break;
+    case RIGHT_UPPER_CORNER: *px = (X_PIXELS-1) - lx; *py = ly;                break;
+    case RIGHT_LOWER_CORNER: *px = (X_PIXELS-1) - lx; *py = (Y_PIXELS-1) - ly; break;
+    case LEFT_LOWER_CORNER:  *px = lx;                *py = (Y_PIXELS-1) - ly; break;
     default: break;
   }
 }
@@ -88,14 +84,24 @@ void line_sweep(DISPLAY_CORNERS corner,COLOR color,LINE_STYLE line_style,DOT_PIX
   int x_incr = 20;
   int y_incr = 20;
 
+  // lines always start at logical coordinates 0,0...
+  
   int px_start, py_start;
   DCT(&px_start,&py_start,0,0,corner);
+    
+  // vary end-point of lines from (0, 0) to (0, lastY)...
 
-  for (int x = 0; x < X_PIXELS_MAX; x += x_incr) {
-     for (int y = 0; y < Y_PIXELS_MAX; y += y_incr) {
-        int px_end, py_end;
-        DCT(&px_end,&py_end,x,y,corner);
-	line_sweep_inner(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
-     }
+  for (int y = 0; y < Y_PIXELS; y += y_incr) {
+     int px_end, py_end;
+     DCT(&px_end,&py_end,X_PIXELS - 1,y,corner);
+     line_sweep_inner(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
+  }
+
+  // then from (lastX, lastY) to (0, lastY)...
+  
+  for (int x = X_PIXELS - 1; x >= 0; x -= x_incr) {
+     int px_end, py_end;
+     DCT(&px_end,&py_end,x,Y_PIXELS - 1,corner);
+     line_sweep_inner(px_start,py_start,px_end,py_end,color,line_style,dot_pixel);	
   }
 }
