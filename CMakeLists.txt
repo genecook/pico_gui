@@ -26,7 +26,7 @@ include_directories(${PICO_LCD_LIB}/lib/font)
 include_directories(${PICO_LCD_LIB}/lib/fatfs)
 include_directories(${PICO_LCD_LIB}/lib/sdcard)
 
-add_executable(my_gui main.c)
+add_executable(my_gui line_sweeps.c)
 
 # enable usb output, disable uart output
 pico_enable_stdio_usb(my_gui 1)
