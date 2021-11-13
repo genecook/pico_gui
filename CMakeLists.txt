@@ -26,15 +26,24 @@ include_directories(${PICO_LCD_LIB}/lib/font)
 include_directories(${PICO_LCD_LIB}/lib/fatfs)
 include_directories(${PICO_LCD_LIB}/lib/sdcard)
 
-add_executable(my_gui line_sweeps.c)
+# build line_sweeps executable...
 
+add_executable(line_sweeps line_sweeps.c)
 # enable usb output, disable uart output
-pico_enable_stdio_usb(my_gui 1)
-pico_enable_stdio_uart(my_gui 0)
-
+pico_enable_stdio_usb(line_sweeps 1)
+pico_enable_stdio_uart(line_sweeps 0)
 # create map/bin/hex/uf2 file etc.
-pico_add_extra_outputs(my_gui)
+pico_add_extra_outputs(line_sweeps)
+target_link_libraries(line_sweeps examples lcd font config pico_stdlib hardware_spi fatfs)
 
-target_link_libraries(my_gui examples lcd font config pico_stdlib hardware_spi fatfs)
+# build display_bmp executable...
+
+add_executable(display_bmp display_bmp.c)
+# enable usb output, disable uart output
+pico_enable_stdio_usb(display_bmp 1)
+pico_enable_stdio_uart(display_bmp 0)
+# create map/bin/hex/uf2 file etc.
+pico_add_extra_outputs(display_bmp)
+target_link_libraries(display_bmp examples lcd font config pico_stdlib hardware_spi fatfs)
 
 
