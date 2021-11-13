@@ -1,8 +1,14 @@
 cmake_minimum_required(VERSION 3.13)
+
+# PICO_SDK_PATH shell variable must be set before running cmake:
+# export PICO_SDK_PATH=~/Desktop/pico-sdk
+
 include(pico_sdk_import.cmake)
 
-#set(PICO_SDK_PATH ~/Desktop/pico-sdk)
-set(PICO_LCD_LIB /home/genec/Desktop/pico/Pico-ResTouch-LCD-X_X_Code/c)
+# use shell variable and/or update this path to reflect where you
+# have unpacked the Waveshare LCD code:
+
+set(PICO_LCD_LIB $ENV{HOME}/Desktop/pico/Pico-ResTouch-LCD-X_X_Code/c)
 
 project(my_gui)
 
