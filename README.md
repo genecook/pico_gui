@@ -8,5 +8,10 @@ display_bmp.c - display a single (bmp formatted) image on display.
     convert -verbose -resize 240x320! mcook_designs.jpg md.bmp
 
   Resolution (240x320) specified for Waveshare 2.8 LCD.
+
+track_touch.c - track pad example. Most of the vendor supplied track
+  panel functions are private (declared static in LCD_Touch.c) and
+  thus out of necessity copied and/or modified for this example.
+  
   
   
