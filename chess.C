@@ -11,6 +11,9 @@ extern "C" {
   void DisplayGameBoard();
   void Wait(uint time_in_milliseconds);
   void ClearScreen();
+  int  OptionsSelected(int touch_x, int touch_y);
+  int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
+  void DisplayStatus(char *the_status);
 }
 
 namespace PicoStreamPlayer {
@@ -23,7 +26,6 @@ int main() {
   Wait(3000);
   ClearScreen();
   DisplayGameBoard();
-  
   stdio_init_all();
 
   std::cout << "Pico Chess, Alpha version..." << std::endl;
