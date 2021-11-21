@@ -76,7 +76,7 @@ add_subdirectory(${PICO_CHESS}/src pico_chess/src)
 
 include_directories(${PICO_CHESS}/include)
 
-add_executable(pico_chess chess.C banner.c ${PICO_CHESS}/src/pico_stream_player.C
+add_executable(pico_chess chess.C chess_game_gui.c ${PICO_CHESS}/src/pico_stream_player.C
                ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
                ${PICO_CHESS}/src/bishop.C ${PICO_CHESS}/src/king.C ${PICO_CHESS}/src/knight.C
 	       ${PICO_CHESS}/src/queen.C ${PICO_CHESS}/src/rook.C ${PICO_CHESS}/src/pawn.C

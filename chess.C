@@ -6,7 +6,11 @@
 #include <chess.h>
 
 extern "C" {
-  void ShowBanner(char *);
+  void GuiStartup();
+  void DisplayImage(char *);
+  void DisplayGameBoard();
+  void Wait(uint time_in_milliseconds);
+  void ClearScreen();
 }
 
 namespace PicoStreamPlayer {
@@ -14,7 +18,11 @@ namespace PicoStreamPlayer {
 }
 
 int main() {
-  ShowBanner((char *) "chesbrd.bmp");
+  GuiStartup();
+  DisplayImage((char *) "chesbrd.bmp");
+  Wait(3000);
+  ClearScreen();
+  DisplayGameBoard();
   
   stdio_init_all();
 
