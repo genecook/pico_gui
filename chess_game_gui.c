@@ -173,3 +173,236 @@ void DisplayGameBoard() {
 
   DrawStatusBorder();
 }
+
+
+//***********************************************************************
+//***********************************************************************
+
+uint32_t my_Storage_OpenReadFile(uint8_t Xpoz, uint16_t Ypoz, const char* BmpName);
+
+void my_LCD_Show_bmp(char *fname) {
+  System_Init(); //System initialize, configure serial port???
+  SD_Init(); 
+
+  LCD_Init(lcd_scan_dir,800); // Initialize LCD panel,
+                              //   confirm the scan mode and the brightness
+    
+  TP_Init(lcd_scan_dir);      // Initialize touch panel
+
+  GUI_Show();
+
+  uint32_t bmplen = 0;
+  
+  if (Storage_CheckBitmapFile((const char*) fname, &bmplen)) {
+    // either SD card not in or bmp file format incorrect...
+    return;
+  }
+
+  // scan and display bmp image...
+  LCD_SetGramScanWay( bmp_scan_dir );
+  my_Storage_OpenReadFile(0, 0, (const char*) fname);
+
+  // restore default scan...
+  LCD_SetGramScanWay( lcd_scan_dir );
+  DEV_Digital_Write(SD_CS_PIN,1);
+}
+
+//***********************************************************************
+// ReadChessPieceBMP - read chess piece graphic image, formatted as bmp
+//                     of 30 x 30 pixels, 24 colors per pixel...
+//***********************************************************************
+
+// chess piece bmp file format as 30x30 pixels, 24 colors per pixel...
+
+#define BMP_HEADER_SIZE 30
+#define NUM_PIXEL_ROWS  30
+#define PIXELS_PER_ROW  30
+#define BITS_PER_PIXEL  24
+
+#define BYTES_PER_BMP_ROW 92  // 3 bytes per pixel times 30 pixels,
+                              //   round up to four byte boundary
+
+// imperically determined light/dark background colors in bmp;
+// replace to match our chess board...
+
+#define BMP_BACKGROUND_COLOR_LIGHT 65529
+#define DESIRED_BACKGROUND_COLOR_LIGHT SQUARE_COLOR_LIGHT
+
+#define BMP_BACKGROUND_COLOR_DARK 48192
+#define DESIRED_BACKGROUND_COLOR_DARK SQUARE_COLOR_DARK
+
+// translate bmp color of 24 bits to uint_16...
+
+#define RGB24TORGB16(R,G,B) ((R>>3)<<11)|((G>>2)<<5)|(B>>3)
+
+//#define DEBUG 1
+
+static uint8_t tbuf[1024]; 
+
+int ReadChessPieceBMP(uint16_t *image_buffer, const char *bmp_file) {
+#ifdef DEBUG
+  printf("[ReadChessPieceBMP] entered...\n");
+#endif
+
+  if (image_buffer == NULL) {
+    printf("NULL IMAGE BUFFER???\n");
+    return -1;
+  }
+  
+  FIL file1; 
+  UINT BytesRead;
+  
+  uint32_t size;      // bitmap size
+  uint32_t index;     //   "    data address offset
+  uint32_t width;     //   "    width
+  uint32_t height;    //   "    height
+  uint32_t bit_pixel; // bits per pixel
+  
+  f_open(&file1, bmp_file, FA_READ);	
+  f_read(&file1, tbuf, BMP_HEADER_SIZE, &BytesRead);
+
+  /* Read bitmap size */
+  size = *(uint16_t *) &tbuf[2] | ( (*(uint16_t *) &tbuf[4]) << 16 );
+  /* Get bitmap data address offset */
+  index = *(uint16_t *) &tbuf[10] | ( (*(uint16_t *) &tbuf[12]) << 16 );
+  /* Read bitmap width */
+  width = *(uint16_t *) &tbuf[18] | ( (*(uint16_t *) &tbuf[20]) << 16 );
+  /* Read bitmap height */
+  height = *(uint16_t *) &tbuf[22] | ( (*(uint16_t *) &tbuf[24]) << 16 );
+  /* Read bits per pixel */
+  bit_pixel = *(uint16_t *) &tbuf[28];
+  
+#ifdef DEBUG
+  printf("file size      = %d \r\n", size);
+  printf("file index     = %d \r\n", index);
+  printf("file width     = %d \r\n", width);
+  printf("file height    = %d \r\n", height);
+  printf("bits per pixel = %d \r\n", bit_pixel);
+#endif
+
+  if (bit_pixel != BITS_PER_PIXEL) {
+    printf("BITS PER PIXEL (%d) IS INCORRECT!\n", bit_pixel);
+    f_close(&file1);
+    return -1;
+  }
+
+  // use the index (offset to file data) to read past the
+  // bmp file header...
+  
+  // (will ASSUME (from vendor supplied sample code) f_open 'resyncs'
+  // and thus no need (gasp!) to close the file before 'reopening')
+  
+  f_open(&file1, bmp_file, FA_READ);
+  f_read(&file1, tbuf, index, &BytesRead);
+
+  if (BytesRead != index) {
+    printf("BYTES READ TO INDEX (%d) INCORRECT?\n",BytesRead);
+    f_close(&file1);
+    return -1;
+  }
+
+  UINT background_color = 0;
+  
+  for (int i = 0; i < height; i++) {
+     f_read(&file1, tbuf, BYTES_PER_BMP_ROW, &BytesRead);
+     
+     if (BytesRead != BYTES_PER_BMP_ROW) {
+       printf("BYTES READ FOR ROW %d (%d) INCORRECT?\n",i,BytesRead);
+       f_close(&file1);
+       return -1;
+     }
+  
+     for (int j = 0; j < width; j++) {
+        int k = j * 3;
+
+	uint16_t this_pixel_color = RGB24TORGB16(tbuf[k + 2],tbuf[k + 1],tbuf[k]);
+
+	if (this_pixel_color == BMP_BACKGROUND_COLOR_LIGHT)
+	  this_pixel_color = SQUARE_COLOR_LIGHT;
+	else if (this_pixel_color == BMP_BACKGROUND_COLOR_DARK)
+	  this_pixel_color = SQUARE_COLOR_DARK;
+	
+	image_buffer[ i * height + j] = this_pixel_color;
+
+#ifdef DEBUG
+	// lazy way of getting background color in prep for color matching above...
+	if (background_color == 0) {
+	  background_color = this_pixel_color; 
+	  printf("Background color: %d\n",background_color);
+	}
+#endif
+     }
+  }
+
+  f_close(&file1);
+
+#ifdef DEBUG
+  printf("[ReadChessPieceBMP] exited.\n");
+#endif
+  
+  return 0; 
+}
+
+//***********************************************************************
+// manage chess piece images...
+//***********************************************************************
+
+struct chess_piece_images {
+  uint16_t king[NUM_PIXEL_ROWS][PIXELS_PER_ROW];
+  uint16_t queen[NUM_PIXEL_ROWS][PIXELS_PER_ROW];
+  uint16_t bishop[NUM_PIXEL_ROWS][PIXELS_PER_ROW];
+  uint16_t knight[NUM_PIXEL_ROWS][PIXELS_PER_ROW];
+  uint16_t rook[NUM_PIXEL_ROWS][PIXELS_PER_ROW];
+  uint16_t pawn[NUM_PIXEL_ROWS][PIXELS_PER_ROW];  
+};
+
+//                                             piece   background
+//                                             color    color
+//                                            -------  ----------
+struct chess_piece_images piece_icons_dd;  //  dark      dark
+struct chess_piece_images piece_icons_dl;  //  dark      light
+struct chess_piece_images piece_icons_ld;  //  light     dark
+struct chess_piece_images piece_icons_ll;  //  light     light
+
+int LoadChessPieceImages() {
+#ifdef DEBUG
+  printf("Loading chess piece images...\n");
+#endif
+  
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "kdd30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "qdd30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "bdd30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "ndd30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "rdd30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "pdd30.bmp")) return -1;
+
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "kld30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "qld30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "bld30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "nld30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "rld30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "pld30.bmp")) return -1;
+  
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "kdl30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "qdl30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "bdl30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "ndl30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "rdl30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "pdl30.bmp")) return -1;
+
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "kll30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "qll30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "bll30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "nll30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "rll30.bmp")) return -1;
+  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "pll30.bmp")) return -1;
+
+#ifdef DEBUG
+  printf("Chess piece images loaded successfully!\n");
+#endif
+
+  return 0;
+}
+
+
+
