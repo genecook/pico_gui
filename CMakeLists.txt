@@ -14,6 +14,7 @@ include(pico_sdk_import)
 # have unpacked the Waveshare LCD code:
 
 set(PICO_LCD_LIB $ENV{HOME}/Desktop/pico/Pico-ResTouch-LCD-X_X_Code/c)
+set(PICO_CHESS $ENV{HOME}/Desktop/pico_chess)
 
 project(my_gui C CXX ASM)
 
@@ -41,40 +42,52 @@ include_directories(${PICO_LCD_LIB}/lib/sdcard)
 
 add_executable(line_sweeps line_sweeps.c)
 # enable usb output, disable uart output
-pico_enable_stdio_usb(line_sweeps 1)
-pico_enable_stdio_uart(line_sweeps 0)
+pico_enable_stdio_usb(line_sweeps 0)
+pico_enable_stdio_uart(line_sweeps 1)
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(line_sweeps)
 target_link_libraries(line_sweeps examples lcd font config pico_stdlib hardware_spi fatfs)
 
 # build display_bmp executable...
 
-add_executable(display_bmp display_bmp.c)
+#add_executable(display_bmp display_bmp.C chess_game_gui.c my_fatfs_storage.c)
+add_subdirectory(${PICO_CHESS}/include pico_chess/include)
+add_subdirectory(${PICO_CHESS}/src pico_chess/src)
+
+include_directories(${PICO_CHESS}/include)
+
+add_executable(display_bmp display_bmp.C chess_game_gui.c my_fatfs_storage.c ${PICO_CHESS}/src/pico_stream_player.C
+               ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
+               ${PICO_CHESS}/src/bishop.C ${PICO_CHESS}/src/king.C ${PICO_CHESS}/src/knight.C
+	       ${PICO_CHESS}/src/queen.C ${PICO_CHESS}/src/rook.C ${PICO_CHESS}/src/pawn.C
+               ${PICO_CHESS}/src/moves_tree.C ${PICO_CHESS}/src/moves_tree_minimax.C
+	       ${PICO_CHESS}/src/eval_move.C ${PICO_CHESS}/src/engine.C
+	       )
+
+target_link_libraries(display_bmp examples lcd font config pico_stdlib hardware_spi fatfs)
+	    
 # enable usb output, disable uart output
-pico_enable_stdio_usb(display_bmp 1)
-pico_enable_stdio_uart(display_bmp 0)
+pico_enable_stdio_usb(display_bmp 0)
+pico_enable_stdio_uart(display_bmp 1)
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(display_bmp)
-target_link_libraries(display_bmp examples lcd font config pico_stdlib hardware_spi fatfs)
 
 # build track_touch executable...
 
 add_executable(track_touch track_touch.c)
 # enable usb output, disable uart output
-pico_enable_stdio_usb(track_touch 1)
-pico_enable_stdio_uart(track_touch 0)
+pico_enable_stdio_usb(track_touch 0)
+pico_enable_stdio_uart(track_touch 1)
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(track_touch)
 target_link_libraries(track_touch examples lcd font config pico_stdlib hardware_spi fatfs)
 
 # build pico_chess executable...
 
-set(PICO_CHESS $ENV{HOME}/Desktop/pico_chess)
+#add_subdirectory(${PICO_CHESS}/include pico_chess/include)
+#add_subdirectory(${PICO_CHESS}/src pico_chess/src)
 
-add_subdirectory(${PICO_CHESS}/include pico_chess/include)
-add_subdirectory(${PICO_CHESS}/src pico_chess/src)
-
-include_directories(${PICO_CHESS}/include)
+#include_directories(${PICO_CHESS}/include)
 
 add_executable(pico_chess chess.C chess_game_gui.c ${PICO_CHESS}/src/pico_stream_player.C
                ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
