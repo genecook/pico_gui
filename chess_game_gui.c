@@ -79,17 +79,20 @@ void ClearScreen() {
 #define MENU_SELECT_X_EXTENT MENU_SELECT_X + 16
 #define MENU_SELECT_Y_EXTENT MENU_SELECT_Y + 16
 
-#define BOARD_ORIGIN_X 8
+#define BOARD_ORIGIN_X 0
 #define BOARD_ORIGIN_Y MENU_SELECT_Y_EXTENT + 20
-#define SQUARE_SIZE    28
+#define SQUARE_SIZE    30
 
-#define SQUARE_COLOR_LIGHT YELLOW
-#define SQUARE_COLOR_DARK  BROWN
+//#define SQUARE_COLOR_LIGHT YELLOW
+//#define SQUARE_COLOR_DARK  BROWN
 
-#define BORDER_X BOARD_ORIGIN_X - 1
-#define BORDER_Y BOARD_ORIGIN_Y - 1
-#define BORDER_EXTENT_X BORDER_X + (SQUARE_SIZE * 8) + 1
-#define BORDER_EXTENT_Y BORDER_Y + (SQUARE_SIZE * 8) + 1
+#define SQUARE_COLOR_LIGHT 65529
+#define SQUARE_COLOR_DARK  1472
+
+#define BORDER_X BOARD_ORIGIN_X + 1
+#define BORDER_Y BOARD_ORIGIN_Y + 1
+#define BORDER_EXTENT_X BORDER_X + (SQUARE_SIZE * 8) - 2
+#define BORDER_EXTENT_Y BORDER_Y + (SQUARE_SIZE * 8) - 1
 
 #define BORDER_COLOR WHITE
 
@@ -109,6 +112,7 @@ struct square_coords {
   unsigned char upper_left_y;
   unsigned char lower_right_x;
   unsigned char lower_right_y;
+  uint8_t color;
 };
 
 struct square_coords board_coords[8][8];
@@ -140,14 +144,16 @@ void DrawStatusBorder() {
 void DisplayStatus(char *the_status) {
 }
 
+enum { LIGHT, DARK };
+
 void DisplayGameBoard() {
   sFONT* TP_Font = &Font16;
   
   GUI_DisString_EN(MENU_ORIGIN_X, MENU_ORIGIN_Y, "Options", TP_Font, BLACK, WHITE);
 
-  int square_color = SQUARE_COLOR_DARK;
+  int square_color = SQUARE_COLOR_LIGHT;
   
-  for (int i = 7; i >= 0; i--) {
+  for (int i = 0; i < 8; i++) {
     for (int j = 0; j < 8; j++) {
       int this_square_x = BOARD_ORIGIN_X + i * SQUARE_SIZE;
       int this_square_y = BOARD_ORIGIN_Y + j * SQUARE_SIZE;
@@ -156,16 +162,17 @@ void DisplayGameBoard() {
 			this_square_x + SQUARE_SIZE, this_square_y + SQUARE_SIZE,
 			square_color, DRAW_FULL, DOT_PIXEL_1X1);
 
-      square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
-      
       board_coords[i][j].upper_left_x  = this_square_x;
       board_coords[i][j].upper_left_y  = this_square_y;
       board_coords[i][j].lower_right_x = this_square_x + SQUARE_SIZE;
       board_coords[i][j].lower_right_y = this_square_y + SQUARE_SIZE;
+      
+      board_coords[i][j].color = (square_color == SQUARE_COLOR_DARK) ? DARK : LIGHT;
+      
+      square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;      
     }
     
     square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
-
   }
 
   GUI_DrawRectangle(BORDER_X, BORDER_Y, BORDER_EXTENT_X, BORDER_EXTENT_Y,
@@ -228,7 +235,7 @@ void my_LCD_Show_bmp(char *fname) {
 #define BMP_BACKGROUND_COLOR_LIGHT 65529
 #define DESIRED_BACKGROUND_COLOR_LIGHT SQUARE_COLOR_LIGHT
 
-#define BMP_BACKGROUND_COLOR_DARK 48192
+#define BMP_BACKGROUND_COLOR_DARK 1472
 #define DESIRED_BACKGROUND_COLOR_DARK SQUARE_COLOR_DARK
 
 // translate bmp color of 24 bits to uint_16...
@@ -239,7 +246,7 @@ void my_LCD_Show_bmp(char *fname) {
 
 static uint8_t tbuf[1024]; 
 
-int ReadChessPieceBMP(uint16_t *image_buffer, const char *bmp_file) {
+int ReadChessPieceBMP(uint16_t image_buffer[NUM_PIXEL_ROWS][PIXELS_PER_ROW], const char *bmp_file) {
 #ifdef DEBUG
   printf("[ReadChessPieceBMP] entered...\n");
 #endif
@@ -252,25 +259,14 @@ int ReadChessPieceBMP(uint16_t *image_buffer, const char *bmp_file) {
   FIL file1; 
   UINT BytesRead;
   
-  uint32_t size;      // bitmap size
-  uint32_t index;     //   "    data address offset
-  uint32_t width;     //   "    width
-  uint32_t height;    //   "    height
-  uint32_t bit_pixel; // bits per pixel
-  
   f_open(&file1, bmp_file, FA_READ);	
   f_read(&file1, tbuf, BMP_HEADER_SIZE, &BytesRead);
 
-  /* Read bitmap size */
-  size = *(uint16_t *) &tbuf[2] | ( (*(uint16_t *) &tbuf[4]) << 16 );
-  /* Get bitmap data address offset */
-  index = *(uint16_t *) &tbuf[10] | ( (*(uint16_t *) &tbuf[12]) << 16 );
-  /* Read bitmap width */
-  width = *(uint16_t *) &tbuf[18] | ( (*(uint16_t *) &tbuf[20]) << 16 );
-  /* Read bitmap height */
-  height = *(uint16_t *) &tbuf[22] | ( (*(uint16_t *) &tbuf[24]) << 16 );
-  /* Read bits per pixel */
-  bit_pixel = *(uint16_t *) &tbuf[28];
+  uint32_t size = *(uint16_t *) &tbuf[2] | ( (*(uint16_t *) &tbuf[4]) << 16 );     // read bitmap size,
+  uint32_t index = *(uint16_t *) &tbuf[10] | ( (*(uint16_t *) &tbuf[12]) << 16 );  //  data address offset,
+  uint32_t width = *(uint16_t *) &tbuf[18] | ( (*(uint16_t *) &tbuf[20]) << 16 );  //  bitmap width,
+  uint32_t height = *(uint16_t *) &tbuf[22] | ( (*(uint16_t *) &tbuf[24]) << 16 ); //  bitmap height,
+  uint32_t bit_pixel = *(uint16_t *) &tbuf[28];                                    //  bits per pixel
   
 #ifdef DEBUG
   printf("file size      = %d \r\n", size);
@@ -315,22 +311,21 @@ int ReadChessPieceBMP(uint16_t *image_buffer, const char *bmp_file) {
      for (int j = 0; j < width; j++) {
         int k = j * 3;
 
-	uint16_t this_pixel_color = RGB24TORGB16(tbuf[k + 2],tbuf[k + 1],tbuf[k]);
-
-	if (this_pixel_color == BMP_BACKGROUND_COLOR_LIGHT)
-	  this_pixel_color = SQUARE_COLOR_LIGHT;
-	else if (this_pixel_color == BMP_BACKGROUND_COLOR_DARK)
-	  this_pixel_color = SQUARE_COLOR_DARK;
-	
-	image_buffer[ i * height + j] = this_pixel_color;
+	uint16_t this_pixel_color = (uint16_t) (RGB24TORGB16(tbuf[k + 2],tbuf[k + 1],tbuf[k]));
 
 #ifdef DEBUG
 	// lazy way of getting background color in prep for color matching above...
 	if (background_color == 0) {
 	  background_color = this_pixel_color; 
-	  printf("Background color: %d\n",background_color);
+	  printf("Background color: %u\n",background_color);
 	}
 #endif
+	//if (this_pixel_color == BMP_BACKGROUND_COLOR_LIGHT)
+	//  this_pixel_color = SQUARE_COLOR_LIGHT;
+	//else if (this_pixel_color == BMP_BACKGROUND_COLOR_DARK)
+	//  this_pixel_color = SQUARE_COLOR_DARK;
+
+	image_buffer[i][j] = this_pixel_color;
      }
   }
 
@@ -369,33 +364,33 @@ int LoadChessPieceImages() {
   printf("Loading chess piece images...\n");
 #endif
   
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "kdd30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "qdd30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "bdd30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "ndd30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "rdd30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "pdd30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dd.king,   "kdd30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dd.queen,  "qdd30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dd.bishop, "bdd30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dd.knight, "ndd30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dd.rook,   "rdd30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dd.pawn,   "pdd30.bmp")) return -1;
 
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "kld30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "qld30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "bld30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "nld30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "rld30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "pld30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ld.king,   "kld30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ld.queen,  "qld30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ld.bishop, "bld30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ld.knight, "nld30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ld.rook,   "rld30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ld.pawn,   "pld30.bmp")) return -1;
   
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "kdl30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "qdl30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "bdl30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "ndl30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "rdl30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "pdl30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dl.king,   "kdl30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dl.queen,  "qdl30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dl.bishop, "bdl30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dl.knight, "ndl30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dl.rook,   "rdl30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_dl.pawn,   "pdl30.bmp")) return -1;
 
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "kll30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "qll30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "bll30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "nll30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "rll30.bmp")) return -1;
-  if (ReadChessPieceBMP((uint16_t *) piece_icons_dd.king, "pll30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ll.king,   "kll30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ll.queen,  "qll30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ll.bishop, "bll30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ll.knight, "nll30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ll.rook,   "rll30.bmp")) return -1;
+  if (ReadChessPieceBMP(piece_icons_ll.pawn,   "pll30.bmp")) return -1;
 
 #ifdef DEBUG
   printf("Chess piece images loaded successfully!\n");
@@ -404,5 +399,157 @@ int LoadChessPieceImages() {
   return 0;
 }
 
+//***********************************************************************
+// draw an 'image'...
+//***********************************************************************
+
+void DrawImage(int x, int y, uint16_t image[NUM_PIXEL_ROWS][PIXELS_PER_ROW],
+	       int num_rows, int num_cols) {
+  for (int i = 0; i < num_rows; i++) {
+    for (int j = 0; j < num_cols; j++) {
+       GUI_DrawPoint(x + j, y + i, image[i][j], DOT_PIXEL_DFT, DOT_STYLE_DFT);
+    }
+  }
+}
+
+void NotationToRowColumn(int *row,int *column,char file,char rank) {
+  switch(file) {
+  case 'a': *row = 0; break;
+  case 'b': *row = 1; break;
+  case 'c': *row = 2; break;
+  case 'd': *row = 3; break;
+  case 'e': *row = 4; break;
+  case 'f': *row = 5; break;
+  case 'g': *row = 6; break;
+  case 'h': *row = 7; break;
+  default: break;
+  }
+  switch(rank) {
+  case '1': *column = 7; break;
+  case '2': *column = 6; break;
+  case '3': *column = 5; break;
+  case '4': *column = 4; break;
+  case '5': *column = 3; break;
+  case '6': *column = 2; break;
+  case '7': *column = 1; break;
+  case '8': *column = 0; break;
+  default: break;
+  }
+  //printf("file/rank: %c/%c row/column: %u/%u\n",file,rank,*row,*column);
+}
+
+void BoardToScreenCoords(int *x,int *y,char file,char rank) {
+  int row, column;
+  
+  NotationToRowColumn(&row,&column,file,rank);
+
+  *x = board_coords[row][column].upper_left_x;
+  *y = board_coords[row][column].upper_left_y;  
+}
+
+int SquareColor(char file, char rank) {
+  int row, column;
+  
+  NotationToRowColumn(&row,&column,file,rank);
+  return board_coords[row][column].color;
+}
+
+enum { KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN };
+
+void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
+  int x, y;
+  BoardToScreenCoords(&x,&y,file,rank);
+
+  uint16_t (*image)[PIXELS_PER_ROW];
+  
+  switch((piece_color << 1) | SquareColor(file,rank)) {
+  case (LIGHT << 1) | LIGHT:
+    switch(piece_index) {
+      case KING:   image = piece_icons_ll.king;    break;
+      case QUEEN:  image = piece_icons_ll.queen;   break;
+      case BISHOP: image = piece_icons_ll.king;    break;
+      case KNIGHT: image = piece_icons_ll.knight;  break;
+      case ROOK:   image = piece_icons_ll.rook;    break;
+      case PAWN:   image = piece_icons_ll.pawn;    break;
+      default: break;
+    }
+    break;
+  case (LIGHT << 1) | DARK:
+    switch(piece_index) {
+      case KING:   image = piece_icons_ld.king;    break;
+      case QUEEN:  image = piece_icons_ld.queen;   break;
+      case BISHOP: image = piece_icons_ld.king;    break;
+      case KNIGHT: image = piece_icons_ld.knight;  break;
+      case ROOK:   image = piece_icons_ld.rook;    break;
+      case PAWN:   image = piece_icons_ld.pawn;    break;
+      default: break;
+    }
+    break;
+  case (DARK << 1) | LIGHT:
+    switch(piece_index) {
+      case KING:   image = piece_icons_dl.king;    break;
+      case QUEEN:  image = piece_icons_dl.queen;   break;
+      case BISHOP: image = piece_icons_dl.king;    break;
+      case KNIGHT: image = piece_icons_dl.knight;  break;
+      case ROOK:   image = piece_icons_dl.rook;    break;
+      case PAWN:   image = piece_icons_dl.pawn;    break;
+      default: break;
+    }
+    break;
+  case (DARK << 1) | DARK:
+    switch(piece_index) {
+      case KING:   image = piece_icons_dd.king;    break;
+      case QUEEN:  image = piece_icons_dd.queen;   break;
+      case BISHOP: image = piece_icons_dd.king;    break;
+      case KNIGHT: image = piece_icons_dd.knight;  break;
+      case ROOK:   image = piece_icons_dd.rook;    break;
+      case PAWN:   image = piece_icons_dd.pawn;    break;
+      default: break;
+    }
+    break;
+  default: break;
+  }
+  
+  DrawImage(x,y,image,NUM_PIXEL_ROWS,PIXELS_PER_ROW); 
+}
+
+void DrawChessPiece() {
+  PlaceChessPiece('a', '1', ROOK,   LIGHT);
+  PlaceChessPiece('b', '1', KNIGHT, LIGHT);
+  PlaceChessPiece('c', '1', BISHOP, LIGHT);
+  PlaceChessPiece('d', '1', QUEEN,  LIGHT);
+  PlaceChessPiece('e', '1', KING,   LIGHT);
+  PlaceChessPiece('f', '1', BISHOP, LIGHT);
+  PlaceChessPiece('g', '1', KNIGHT, LIGHT);
+  PlaceChessPiece('h', '1', ROOK,   LIGHT);
+
+  PlaceChessPiece('a', '2', PAWN,   LIGHT);
+  PlaceChessPiece('b', '2', PAWN,   LIGHT);
+  PlaceChessPiece('c', '2', PAWN,   LIGHT);
+  PlaceChessPiece('d', '2', PAWN,   LIGHT);
+  PlaceChessPiece('e', '2', PAWN,   LIGHT);
+  PlaceChessPiece('f', '2', PAWN,   LIGHT);
+  PlaceChessPiece('g', '2', PAWN,   LIGHT);
+  PlaceChessPiece('h', '2', PAWN,   LIGHT);
+
+  PlaceChessPiece('a', '8', ROOK,   DARK);
+  PlaceChessPiece('b', '8', KNIGHT, DARK);
+  PlaceChessPiece('c', '8', BISHOP, DARK);
+  PlaceChessPiece('d', '8', QUEEN,  DARK);
+  PlaceChessPiece('e', '8', KING,   DARK);
+  PlaceChessPiece('f', '8', BISHOP, DARK);
+  PlaceChessPiece('g', '8', KNIGHT, DARK);
+  PlaceChessPiece('h', '8', ROOK,   DARK);
+
+  PlaceChessPiece('a', '7', PAWN,   DARK);
+  PlaceChessPiece('b', '7', PAWN,   DARK);
+  PlaceChessPiece('c', '7', PAWN,   DARK);
+  PlaceChessPiece('d', '7', PAWN,   DARK);
+  PlaceChessPiece('e', '7', PAWN,   DARK);
+  PlaceChessPiece('f', '7', PAWN,   DARK);
+  PlaceChessPiece('g', '7', PAWN,   DARK);
+  PlaceChessPiece('h', '7', PAWN,   DARK);
+
+}
 
 
