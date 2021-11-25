@@ -56,7 +56,7 @@ add_subdirectory(${PICO_CHESS}/src pico_chess/src)
 
 include_directories(${PICO_CHESS}/include)
 
-add_executable(display_bmp display_bmp.C chess_game_gui.c my_fatfs_storage.c ${PICO_CHESS}/src/pico_stream_player.C
+add_executable(display_bmp display_bmp.C chess_game_gui.c my_fatfs_storage.c my_track_touch.c ${PICO_CHESS}/src/pico_stream_player.C
                ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
                ${PICO_CHESS}/src/bishop.C ${PICO_CHESS}/src/king.C ${PICO_CHESS}/src/knight.C
 	       ${PICO_CHESS}/src/queen.C ${PICO_CHESS}/src/rook.C ${PICO_CHESS}/src/pawn.C
@@ -74,7 +74,7 @@ pico_add_extra_outputs(display_bmp)
 
 # build track_touch executable...
 
-add_executable(track_touch track_touch.c)
+add_executable(track_touch track_touch.c my_track_touch.c)
 # enable usb output, disable uart output
 pico_enable_stdio_usb(track_touch 0)
 pico_enable_stdio_uart(track_touch 1)
@@ -89,7 +89,7 @@ target_link_libraries(track_touch examples lcd font config pico_stdlib hardware_
 
 #include_directories(${PICO_CHESS}/include)
 
-add_executable(pico_chess chess.C chess_game_gui.c ${PICO_CHESS}/src/pico_stream_player.C
+add_executable(pico_chess chess.C chess_game_gui.c my_track_touch.c ${PICO_CHESS}/src/pico_stream_player.C
                ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
                ${PICO_CHESS}/src/bishop.C ${PICO_CHESS}/src/king.C ${PICO_CHESS}/src/knight.C
 	       ${PICO_CHESS}/src/queen.C ${PICO_CHESS}/src/rook.C ${PICO_CHESS}/src/pawn.C

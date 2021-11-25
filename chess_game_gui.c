@@ -14,6 +14,20 @@
 #include "ff.h"
 #include "fatfs_storage.h"
 
+void InitTouchPanel( LCD_SCAN_DIR Lcd_ScanDir );
+void ReadTouch(POINT *x, POINT *y);
+
+
+//*****************************************************************************
+//*****************************************************************************
+
+void ReadScreenTouch(int *x, int *y) {
+  POINT px, py;
+  ReadTouch(&px, &py);
+  *x = px;
+  *y = py;
+}
+
 //*****************************************************************************
 // pico chess-game gui api...
 //*****************************************************************************
@@ -50,7 +64,7 @@ void GuiStartup() {
   LCD_Init(lcd_scan_dir,800); // Initialize LCD panel,
                               //   confirm the scan mode and the brightness
     
-  TP_Init(lcd_scan_dir);      // Initialize touch panel
+  InitTouchPanel(lcd_scan_dir); // Initialize touch panel
 
   GUI_Show();
 }
@@ -101,7 +115,9 @@ void ClearScreen() {
 #define STATUS_EXTENT_X BORDER_EXTENT_X
 #define STATUS_EXTENT_Y STATUS_Y + 32
 #define STATUS_COLOR BORDER_COLOR
-
+#define STATUS_TEXT_X STATUS_X + 8
+#define STATUS_TEXT_Y STATUS_Y + 8
+  
 int OptionsSelected(int touch_x, int touch_y) {
   return ( (touch_x > MENU_SELECT_X) && (touch_x < MENU_SELECT_X_EXTENT) &&
 	   (touch_y > MENU_SELECT_Y) && (touch_y < MENU_SELECT_Y_EXTENT) );
@@ -141,7 +157,10 @@ void DrawStatusBorder() {
 
 // display text status below game board. Do multi-line comments work???
 
-void DisplayStatus(char *the_status) {
+void DisplayStatus(const char *the_status) {
+  sFONT* TP_Font = &Font16;
+  DrawStatusBorder();
+  GUI_DisString_EN(STATUS_TEXT_X, STATUS_TEXT_Y, the_status, TP_Font, BLACK, WHITE);
 }
 
 enum { LIGHT, DARK };

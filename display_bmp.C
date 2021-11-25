@@ -17,10 +17,11 @@ extern "C" {
   void ClearScreen();
   int  OptionsSelected(int touch_x, int touch_y);
   int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
-  void DisplayStatus(char *the_status);
+  void DisplayStatus(const char *the_status);
   void my_LCD_Show_bmp(char *fname);
   int  LoadChessPieceImages();
   void DrawChessPiece();
+  void ReadScreenTouch(int *x, int *y);
 }
 
 namespace PicoStreamPlayer {
@@ -46,10 +47,20 @@ int main(void)
     
     std::cout << "Display BMP formatted image..." << std::endl;
 
+    DisplayStatus("Its your move...");
+   
+    while(1) {
+      int x,y;
+      ReadScreenTouch(&x, &y);
+      char tbuf[128];
+      sprintf(tbuf,"Row/Column: %d/%d",x,y);
+      DisplayStatus(tbuf);
+    }
+    
     PicoChess::ChessEngine my_little_engine;
   
     PicoStreamPlayer::Play(&my_little_engine);
-  
+
     return 0;
 }
 
