@@ -20,6 +20,7 @@ extern "C" {
   void DisplayStatus(char *the_status);
   void my_LCD_Show_bmp(char *fname);
   int  LoadChessPieceImages();
+  void DrawChessPiece();
 }
 
 namespace PicoStreamPlayer {
@@ -33,10 +34,12 @@ int main(void)
     Wait(3000);
     ClearScreen();
     DisplayGameBoard();
-    
-    my_LCD_Show_bmp((char *) "kdl30.bmp");
 
-    LoadChessPieceImages();    
+    
+    //my_LCD_Show_bmp((char *) "kdd30.bmp");
+    LoadChessPieceImages();
+    DrawChessPiece();
+
     Wait(3000);
 
     stdio_init_all(); // don't need???
