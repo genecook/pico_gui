@@ -16,7 +16,7 @@
 
 void InitTouchPanel( LCD_SCAN_DIR Lcd_ScanDir );
 void ReadTouch(POINT *x, POINT *y);
-
+void RowColumnToNotation(char *rank,char *file,int row,int column);
 
 //*****************************************************************************
 //*****************************************************************************
@@ -124,10 +124,10 @@ int OptionsSelected(int touch_x, int touch_y) {
 }
 
 struct square_coords {
-  unsigned char upper_left_x;
-  unsigned char upper_left_y;
-  unsigned char lower_right_x;
-  unsigned char lower_right_y;
+  uint16_t upper_left_x;
+  uint16_t upper_left_y;
+  uint16_t lower_right_x;
+  uint16_t lower_right_y;
   uint8_t color;
 };
 
@@ -188,7 +188,7 @@ void DisplayGameBoard() {
       
       board_coords[i][j].color = (square_color == SQUARE_COLOR_DARK) ? DARK : LIGHT;
       
-      square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;      
+      square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
     }
     
     square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
@@ -429,6 +429,13 @@ void DrawImage(int x, int y, uint16_t image[NUM_PIXEL_ROWS][PIXELS_PER_ROW],
        GUI_DrawPoint(x + j, y + i, image[i][j], DOT_PIXEL_DFT, DOT_STYLE_DFT);
     }
   }
+}
+
+void RowColumnToNotation(char *rank,char *file,int row,int column) {
+  char files[] = { 'a','b','c','d','e','f','g','h' };
+  *file = files[row];
+  char ranks[] = { '8','7','6','5','4','3','2','1' };
+  *rank = ranks[column];
 }
 
 void NotationToRowColumn(int *row,int *column,char file,char rank) {

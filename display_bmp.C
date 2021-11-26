@@ -22,6 +22,8 @@ extern "C" {
   int  LoadChessPieceImages();
   void DrawChessPiece();
   void ReadScreenTouch(int *x, int *y);
+  int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
+  void RowColumnToNotation(char *rank,char *file,int row,int column);
 }
 
 namespace PicoStreamPlayer {
@@ -48,12 +50,18 @@ int main(void)
     std::cout << "Display BMP formatted image..." << std::endl;
 
     DisplayStatus("Its your move...");
-   
+
     while(1) {
-      int x,y;
-      ReadScreenTouch(&x, &y);
+      int touch_x,touch_y;
+      ReadScreenTouch(&touch_x, &touch_y);
+      int row,column;
       char tbuf[128];
-      sprintf(tbuf,"Row/Column: %d/%d",x,y);
+      if (SquareSelected(&row,&column,touch_x,touch_y)) {
+	char rank,file;
+	RowColumnToNotation(&rank,&file,row,column);
+        sprintf(tbuf,"File/rank:       %c%c",file,rank);
+      } else
+        sprintf(tbuf,"Row/Column: %03d/%03d",touch_x,touch_y);
       DisplayStatus(tbuf);
     }
     
