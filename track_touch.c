@@ -32,12 +32,20 @@ int main(void)
 
     GUI_Clear(BLACK);
 
+    stdio_init_all();
+    printf("track touch...\n");
+    
     // read touch, draw dots to track...
+
+    char tbuf[128];
+    sFONT* TP_Font = &Font16;
     
     while(1) {
       POINT x,y;
       ReadTouch(&x, &y);
       GUI_DrawPoint(x, y, WHITE, DOT_PIXEL_2X2 , DOT_FILL_AROUND);
+      sprintf(tbuf,"x/y: %d/%d ",x,y);
+      GUI_DisString_EN(10,10,tbuf,TP_Font, BLACK, WHITE);
     }
     
     return 0;

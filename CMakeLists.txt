@@ -75,12 +75,14 @@ pico_add_extra_outputs(display_bmp)
 # build track_touch executable...
 
 add_executable(track_touch track_touch.c my_track_touch.c)
+
+target_link_libraries(track_touch examples lcd font config pico_stdlib hardware_spi fatfs)
+
 # enable usb output, disable uart output
 pico_enable_stdio_usb(track_touch 0)
 pico_enable_stdio_uart(track_touch 1)
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(track_touch)
-target_link_libraries(track_touch examples lcd font config pico_stdlib hardware_spi fatfs)
 
 # build pico_chess executable...
 

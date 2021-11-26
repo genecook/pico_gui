@@ -37,7 +37,6 @@ int main(void)
     Wait(3000);
     ClearScreen();
     DisplayGameBoard();
-
     
     //my_LCD_Show_bmp((char *) "kdd30.bmp");
     LoadChessPieceImages();
@@ -49,20 +48,24 @@ int main(void)
     
     std::cout << "Display BMP formatted image..." << std::endl;
 
-    DisplayStatus("Its your move...");
+    DisplayStatus(">>>");
 
+    char tbuf[128];
+    
     while(1) {
-      int touch_x,touch_y;
+      int touch_x,touch_y;  
       ReadScreenTouch(&touch_x, &touch_y);
+      
       int row,column;
-      char tbuf[128];
       if (SquareSelected(&row,&column,touch_x,touch_y)) {
 	char rank,file;
 	RowColumnToNotation(&rank,&file,row,column);
-        sprintf(tbuf,"File/rank:       %c%c",file,rank);
-      } else
-        sprintf(tbuf,"Row/Column: %03d/%03d",touch_x,touch_y);
-      DisplayStatus(tbuf);
+        sprintf(tbuf," %c%c",file,rank);
+      } else {
+	sprintf(tbuf,"???");
+      }
+      
+      DisplayStatus(tbuf);	
     }
     
     PicoChess::ChessEngine my_little_engine;
