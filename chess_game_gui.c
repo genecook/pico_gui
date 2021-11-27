@@ -627,7 +627,10 @@ void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
   }
   
   DrawImage(x,y,image,NUM_PIXEL_ROWS,PIXELS_PER_ROW);
-  UpdateDisplayBoardState(x,y,piece_index,piece_color,ADD_PIECE);
+
+  int row,column;
+  NotationToRowColumn(&row,&column,file,rank);
+  UpdateDisplayBoardState(row,column,piece_index,piece_color,ADD_PIECE);
 }
 
 //***********************************************************************
@@ -684,9 +687,9 @@ void MoveChessPiece(const char *move) {
 
   uint8_t piece_type,piece_color;
 
-  int x, y;
-  BoardToScreenCoords(&x,&y,starting_file,starting_rank);
-  GetPieceInfo(&piece_type,&piece_color,x,y);
+  int row,column;
+  NotationToRowColumn(&row,&column,starting_file,starting_rank);
+  GetPieceInfo(&piece_type,&piece_color,row,column);
 
   if (piece_type == EMPTY) {
     // buggy code dude!!!
