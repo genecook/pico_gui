@@ -20,7 +20,7 @@ project(my_gui C CXX ASM)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DFOR_PICO")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -DFOR_PICO -DREDIRECT_XBOARD_CALLS")
 
 pico_sdk_init()
 
@@ -56,7 +56,8 @@ add_subdirectory(${PICO_CHESS}/src pico_chess/src)
 
 include_directories(${PICO_CHESS}/include)
 
-add_executable(display_bmp display_bmp.C chess_game_gui.c my_fatfs_storage.c my_track_touch.c ${PICO_CHESS}/src/pico_stream_player.C
+add_executable(display_bmp display_bmp.C chess_game_gui.c my_fatfs_storage.c my_track_touch.c
+               ${PICO_CHESS}/src/pico_stream_player.C
                ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
                ${PICO_CHESS}/src/bishop.C ${PICO_CHESS}/src/king.C ${PICO_CHESS}/src/knight.C
 	       ${PICO_CHESS}/src/queen.C ${PICO_CHESS}/src/rook.C ${PICO_CHESS}/src/pawn.C
@@ -91,7 +92,8 @@ pico_add_extra_outputs(track_touch)
 
 #include_directories(${PICO_CHESS}/include)
 
-add_executable(pico_chess chess.C chess_game_gui.c my_track_touch.c ${PICO_CHESS}/src/pico_stream_player.C
+add_executable(pico_chess chess.C chess_game_gui.c my_fatfs_storage.c my_track_touch.c
+               ${PICO_CHESS}/src/pico_stream_player.C
                ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
                ${PICO_CHESS}/src/bishop.C ${PICO_CHESS}/src/king.C ${PICO_CHESS}/src/knight.C
 	       ${PICO_CHESS}/src/queen.C ${PICO_CHESS}/src/rook.C ${PICO_CHESS}/src/pawn.C

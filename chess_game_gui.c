@@ -19,6 +19,7 @@ void ReadTouch(POINT *x, POINT *y);
 void RowColumnToNotation(char *rank,char *file,int row,int column);
 
 //*****************************************************************************
+// LCD agnostic access to touch...
 //*****************************************************************************
 
 void ReadScreenTouch(int *x, int *y) {
@@ -57,6 +58,10 @@ void DisplayImage(char *fname) {
   DEV_Digital_Write(SD_CS_PIN,1);
 }
 
+//***********************************************************************
+// sequence used to initialize LCD/touch panel...
+//***********************************************************************
+
 void GuiStartup() {
   System_Init(); //System initialize, configure serial port and SPI interface...
   SD_Init(); 
@@ -82,6 +87,8 @@ void ClearScreen() {
 }
 
 //***********************************************************************
+// screen parameters related to the display of the chess board, its
+// options menu, and status bar...
 //***********************************************************************
 
 #define MENU_ORIGIN_X   0
@@ -99,6 +106,8 @@ void ClearScreen() {
 
 //#define SQUARE_COLOR_LIGHT YELLOW
 //#define SQUARE_COLOR_DARK  BROWN
+
+// background colors taken from chess piece bmp files:
 
 #define SQUARE_COLOR_LIGHT 65529
 #define SQUARE_COLOR_DARK  1472
@@ -118,20 +127,58 @@ void ClearScreen() {
 #define STATUS_TEXT_X STATUS_X + 8
 #define STATUS_TEXT_Y STATUS_Y + 8
   
+//***********************************************************************
+// return true if options 'bar' touched...
+//***********************************************************************
+
 int OptionsSelected(int touch_x, int touch_y) {
   return ( (touch_x > MENU_SELECT_X) && (touch_x < MENU_SELECT_X_EXTENT) &&
 	   (touch_y > MENU_SELECT_Y) && (touch_y < MENU_SELECT_Y_EXTENT) );
 }
+
+//***********************************************************************
+// when the chess board is drawn, the coordinates for each square are
+// stored in board_coords...
+//***********************************************************************
+
+enum { EMPTY = 0, KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN };
+enum { LIGHT, DARK };      // chess board squares are either light or dark
+
+enum { ADD_PIECE, REMOVE_PIECE };
+
+// maintain enough game state to draw or update the game board during play.
+// the chess engine is responsible for conveying move updates 'back' to the
+// displayed game state...
 
 struct square_coords {
   uint16_t upper_left_x;
   uint16_t upper_left_y;
   uint16_t lower_right_x;
   uint16_t lower_right_y;
-  uint8_t color;
+  uint8_t  piece_type;
+  uint8_t  piece_color;
+  uint8_t  square_color;
 };
 
 struct square_coords board_coords[8][8];
+
+void UpdateDisplayBoardState(int x,int y,uint8_t piece_type,uint8_t piece_color, int action) {
+  if (action == ADD_PIECE) {
+    board_coords[x][y].piece_type  = piece_type;
+    board_coords[x][y].piece_color = piece_color;
+  } else {
+    board_coords[x][y].piece_type  = EMPTY;
+    board_coords[x][y].piece_color = LIGHT; // board square is empty so color doesn't matter, still...
+  }
+}
+
+void GetPieceInfo(uint8_t *piece_type,uint8_t *piece_color,int x, int y) {
+  *piece_type  = board_coords[x][y].piece_type;
+  *piece_color = board_coords[x][y].piece_color;  
+}
+
+// using board (square) coordinates, and a 'touch' point, identify which
+// board square was accessed...
 
 int SquareSelected(int *row, int *column, int touch_x, int touch_y) {
   for (int i = 0; i < 8; i++) {
@@ -150,6 +197,10 @@ int SquareSelected(int *row, int *column, int touch_x, int touch_y) {
   return 0;
 }
 
+//***********************************************************************
+// a status 'window' is maintained below the displayed chess board... 
+//***********************************************************************
+
 void DrawStatusBorder() {
   GUI_DrawRectangle(STATUS_X, STATUS_Y, STATUS_EXTENT_X, STATUS_EXTENT_Y,
 		    STATUS_COLOR, DRAW_EMPTY, DOT_PIXEL_1X1);
@@ -163,7 +214,9 @@ void DisplayStatus(const char *the_status) {
   GUI_DisString_EN(STATUS_TEXT_X, STATUS_TEXT_Y, the_status, TP_Font, BLACK, WHITE);
 }
 
-enum { LIGHT, DARK };
+//***********************************************************************
+// draw the chess board, options and status bars (such as they are)...
+//***********************************************************************
 
 void DisplayGameBoard() {
   sFONT* TP_Font = &Font16;
@@ -181,13 +234,15 @@ void DisplayGameBoard() {
 			this_square_x + SQUARE_SIZE, this_square_y + SQUARE_SIZE,
 			square_color, DRAW_FULL, DOT_PIXEL_1X1);
 
+      // store away the coordinates for each chess board square...
       board_coords[i][j].upper_left_x  = this_square_x;
       board_coords[i][j].upper_left_y  = this_square_y;
       board_coords[i][j].lower_right_x = this_square_x + SQUARE_SIZE;
       board_coords[i][j].lower_right_y = this_square_y + SQUARE_SIZE;
       
-      board_coords[i][j].color = (square_color == SQUARE_COLOR_DARK) ? DARK : LIGHT;
-      
+      board_coords[i][j].square_color = (square_color == SQUARE_COLOR_DARK) ? DARK : LIGHT;
+
+      // square colors alternate of course...
       square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
     }
     
@@ -200,8 +255,23 @@ void DisplayGameBoard() {
   DrawStatusBorder();
 }
 
+// after chess board is displayed (via above DisplayGameBoard function),
+// individual board squares may be redrawn via this function...
+
+void RedrawBoardSquare(int row, int column) {
+  int square_color = (board_coords[row][column].square_color == LIGHT) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
+  
+  GUI_DrawRectangle(board_coords[row][column].upper_left_x,
+		    board_coords[row][column].upper_left_y,
+		    board_coords[row][column].upper_left_x + SQUARE_SIZE,
+		    board_coords[row][column].upper_left_y + SQUARE_SIZE,
+		    square_color,
+		    DRAW_FULL, DOT_PIXEL_1X1);
+}
 
 //***********************************************************************
+// lifted from vendor LCD/flash-access code. Modified so as to display
+// only a single BMP-formated image, read from flash...
 //***********************************************************************
 
 uint32_t my_Storage_OpenReadFile(uint8_t Xpoz, uint16_t Ypoz, const char* BmpName);
@@ -281,11 +351,12 @@ int ReadChessPieceBMP(uint16_t image_buffer[NUM_PIXEL_ROWS][PIXELS_PER_ROW], con
   f_open(&file1, bmp_file, FA_READ);	
   f_read(&file1, tbuf, BMP_HEADER_SIZE, &BytesRead);
 
-  uint32_t size = *(uint16_t *) &tbuf[2] | ( (*(uint16_t *) &tbuf[4]) << 16 );     // read bitmap size,
-  uint32_t index = *(uint16_t *) &tbuf[10] | ( (*(uint16_t *) &tbuf[12]) << 16 );  //  data address offset,
-  uint32_t width = *(uint16_t *) &tbuf[18] | ( (*(uint16_t *) &tbuf[20]) << 16 );  //  bitmap width,
-  uint32_t height = *(uint16_t *) &tbuf[22] | ( (*(uint16_t *) &tbuf[24]) << 16 ); //  bitmap height,
-  uint32_t bit_pixel = *(uint16_t *) &tbuf[28];                                    //  bits per pixel
+  // endianness issues unless these parameters are read from the bmp header like so:
+  uint32_t size      = *(uint16_t *) &tbuf[2]  | ( (*(uint16_t *) &tbuf[4]) << 16  ); // read bitmap size,
+  uint32_t index     = *(uint16_t *) &tbuf[10] | ( (*(uint16_t *) &tbuf[12]) << 16 ); //  data address offset,
+  uint32_t width     = *(uint16_t *) &tbuf[18] | ( (*(uint16_t *) &tbuf[20]) << 16 ); //  bitmap width,
+  uint32_t height    = *(uint16_t *) &tbuf[22] | ( (*(uint16_t *) &tbuf[24]) << 16 ); //  bitmap height,
+  uint32_t bit_pixel = *(uint16_t *) &tbuf[28];                                       //  bits per pixel
   
 #ifdef DEBUG
   printf("file size      = %d \r\n", size);
@@ -305,7 +376,7 @@ int ReadChessPieceBMP(uint16_t image_buffer[NUM_PIXEL_ROWS][PIXELS_PER_ROW], con
   // bmp file header...
   
   // (will ASSUME (from vendor supplied sample code) f_open 'resyncs'
-  // and thus no need (gasp!) to close the file before 'reopening')
+  // and thus no need to close the file before 'reopening')
   
   f_open(&file1, bmp_file, FA_READ);
   f_read(&file1, tbuf, index, &BytesRead);
@@ -339,11 +410,6 @@ int ReadChessPieceBMP(uint16_t image_buffer[NUM_PIXEL_ROWS][PIXELS_PER_ROW], con
 	  printf("Background color: %u\n",background_color);
 	}
 #endif
-	//if (this_pixel_color == BMP_BACKGROUND_COLOR_LIGHT)
-	//  this_pixel_color = SQUARE_COLOR_LIGHT;
-	//else if (this_pixel_color == BMP_BACKGROUND_COLOR_DARK)
-	//  this_pixel_color = SQUARE_COLOR_DARK;
-
 	image_buffer[i][j] = this_pixel_color;
      }
   }
@@ -359,6 +425,9 @@ int ReadChessPieceBMP(uint16_t image_buffer[NUM_PIXEL_ROWS][PIXELS_PER_ROW], con
 
 //***********************************************************************
 // manage chess piece images...
+//
+// to properly display light or dark chess pieces on light or dark
+// board squares, need corresponding chess piece bmp's...
 //***********************************************************************
 
 struct chess_piece_images {
@@ -431,6 +500,11 @@ void DrawImage(int x, int y, uint16_t image[NUM_PIXEL_ROWS][PIXELS_PER_ROW],
   }
 }
 
+//***********************************************************************
+// translate chess board square row/column index into standard notation,
+// and vice-versa...
+//***********************************************************************
+
 void RowColumnToNotation(char *rank,char *file,int row,int column) {
   char files[] = { 'a','b','c','d','e','f','g','h' };
   *file = files[row];
@@ -461,8 +535,9 @@ void NotationToRowColumn(int *row,int *column,char file,char rank) {
   case '8': *column = 0; break;
   default: break;
   }
-  //printf("file/rank: %c/%c row/column: %u/%u\n",file,rank,*row,*column);
 }
+
+// translate standard notation into board square coordinates...
 
 void BoardToScreenCoords(int *x,int *y,char file,char rank) {
   int row, column;
@@ -473,14 +548,29 @@ void BoardToScreenCoords(int *x,int *y,char file,char rank) {
   *y = board_coords[row][column].upper_left_y;  
 }
 
+// given chess board (square) position in standard notation,
+// return square 'color' (light or dark)...
+
 int SquareColor(char file, char rank) {
   int row, column;
   
   NotationToRowColumn(&row,&column,file,rank);
-  return board_coords[row][column].color;
+  return board_coords[row][column].square_color;
 }
 
-enum { KING, QUEEN, BISHOP, KNIGHT, ROOK, PAWN };
+// remove piece from board, redraw board square...
+
+void RemovePiece(char file, char rank) {
+  int row, column;
+  
+  NotationToRowColumn(&row,&column,file,rank);
+  UpdateDisplayBoardState(row,column,EMPTY,LIGHT,REMOVE_PIECE);
+  RedrawBoardSquare(row, column);
+}
+
+//***********************************************************************
+// draw chess piece (given its type, color, and its intended position)...
+//***********************************************************************
 
 void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
   int x, y;
@@ -493,7 +583,7 @@ void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
     switch(piece_index) {
       case KING:   image = piece_icons_ll.king;    break;
       case QUEEN:  image = piece_icons_ll.queen;   break;
-      case BISHOP: image = piece_icons_ll.king;    break;
+      case BISHOP: image = piece_icons_ll.bishop;  break;
       case KNIGHT: image = piece_icons_ll.knight;  break;
       case ROOK:   image = piece_icons_ll.rook;    break;
       case PAWN:   image = piece_icons_ll.pawn;    break;
@@ -504,7 +594,7 @@ void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
     switch(piece_index) {
       case KING:   image = piece_icons_ld.king;    break;
       case QUEEN:  image = piece_icons_ld.queen;   break;
-      case BISHOP: image = piece_icons_ld.king;    break;
+      case BISHOP: image = piece_icons_ld.bishop;  break;
       case KNIGHT: image = piece_icons_ld.knight;  break;
       case ROOK:   image = piece_icons_ld.rook;    break;
       case PAWN:   image = piece_icons_ld.pawn;    break;
@@ -515,7 +605,7 @@ void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
     switch(piece_index) {
       case KING:   image = piece_icons_dl.king;    break;
       case QUEEN:  image = piece_icons_dl.queen;   break;
-      case BISHOP: image = piece_icons_dl.king;    break;
+      case BISHOP: image = piece_icons_dl.bishop;  break;
       case KNIGHT: image = piece_icons_dl.knight;  break;
       case ROOK:   image = piece_icons_dl.rook;    break;
       case PAWN:   image = piece_icons_dl.pawn;    break;
@@ -526,7 +616,7 @@ void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
     switch(piece_index) {
       case KING:   image = piece_icons_dd.king;    break;
       case QUEEN:  image = piece_icons_dd.queen;   break;
-      case BISHOP: image = piece_icons_dd.king;    break;
+      case BISHOP: image = piece_icons_dd.bishop;  break;
       case KNIGHT: image = piece_icons_dd.knight;  break;
       case ROOK:   image = piece_icons_dd.rook;    break;
       case PAWN:   image = piece_icons_dd.pawn;    break;
@@ -536,10 +626,15 @@ void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
   default: break;
   }
   
-  DrawImage(x,y,image,NUM_PIXEL_ROWS,PIXELS_PER_ROW); 
+  DrawImage(x,y,image,NUM_PIXEL_ROWS,PIXELS_PER_ROW);
+  UpdateDisplayBoardState(x,y,piece_index,piece_color,ADD_PIECE);
 }
 
-void DrawChessPiece() {
+//***********************************************************************
+// place/draw chess pieces for 'new game'... 
+//***********************************************************************
+
+void DrawChessPiecesNewGame() {
   PlaceChessPiece('a', '1', ROOK,   LIGHT);
   PlaceChessPiece('b', '1', KNIGHT, LIGHT);
   PlaceChessPiece('c', '1', BISHOP, LIGHT);
@@ -575,7 +670,34 @@ void DrawChessPiece() {
   PlaceChessPiece('f', '7', PAWN,   DARK);
   PlaceChessPiece('g', '7', PAWN,   DARK);
   PlaceChessPiece('h', '7', PAWN,   DARK);
+}
 
+//***********************************************************************
+// move chess piece - ASSUME move has been validated!!!
+//***********************************************************************
+
+void MoveChessPiece(const char *move) {
+  char starting_file = move[0];
+  char starting_rank = move[1];
+  char end_file      = move[2];
+  char end_rank      = move[3];
+
+  uint8_t piece_type,piece_color;
+
+  int x, y;
+  BoardToScreenCoords(&x,&y,starting_file,starting_rank);
+  GetPieceInfo(&piece_type,&piece_color,x,y);
+
+  if (piece_type == EMPTY) {
+    // buggy code dude!!!
+    char tbuf[20];
+    sprintf(tbuf,"!!! %s !!!",move);
+    DisplayStatus(tbuf);
+    return;
+  }
+  
+  RemovePiece(starting_file,starting_rank);
+  PlaceChessPiece(end_file,end_rank,piece_type,piece_color);
 }
 
 
