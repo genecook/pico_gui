@@ -25,6 +25,7 @@ extern "C" {
   int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
   void RowColumnToNotation(char *rank,char *file,int row,int column);
   void MoveChessPiece(const char *move);
+  void DisplayToOptions(const char *the_status);
 }
 
 namespace PicoStreamPlayer {
@@ -32,11 +33,11 @@ namespace PicoStreamPlayer {
 
   // "new"  - new game
   // "usermove" - next token is move 
-  static char move_str[80] = {};
+  static char move_str[80];
 
-  enum { WAITING, MOVE_SEQUENCE_STARTED, HAVE_NEXT_MOVE };
+  enum { STARTUP, WAITING, MOVE_SEQUENCE_STARTED, HAVE_NEXT_MOVE };
   
-  static int move_state = WAITING;
+  static int move_state = STARTUP;
 
   void get_square_selection(int *row, int *column) {
     int touch_x,touch_y;  
@@ -54,22 +55,31 @@ namespace PicoStreamPlayer {
   }
   
   void get_next_token(std::string &next_token) {
+    /*
       int touch_x,touch_y;  
       int row,column;
 
       ReadScreenTouch(&touch_x, &touch_y);
 
       // process options request...
+
       if (OptionsSelected(touch_x, touch_y)) {
         DisplayStatus("No options yet.");
 	return;
       }
-
+*/
+      
       char xbuf[20];
       switch(move_state) {
+        case STARTUP:        // inform engine that "xboard" is connected...
+	                     next_token = "xboard";
+	                     move_state = WAITING;
+                             return;
+	                     break;
         case WAITING:        // start move sequence by returning 'usermove' token...
-                             strcpy(move_str,"usermove");
-                             move_state = MOVE_SEQUENCE_STARTED;
+                             next_token = "usermove";
+                             move_str[0] = '\0';
+	                     move_state = MOVE_SEQUENCE_STARTED;
 			     DisplayStatus(">>> usermove        ");
                              return;
 	                     break;
@@ -78,15 +88,17 @@ namespace PicoStreamPlayer {
 	                     DisplayStatus(">>> get next move   ");
 	                     break;
         case HAVE_NEXT_MOVE: // have a 'next' move...
-	                     next_token = move_str;
+	                     //next_token = move_str;
 	                     move_str[0] = '\0';
 	                     move_state = WAITING;
-			     sprintf(xbuf,"MMM: %s MMM",next_token.c_str());
+			     sprintf(xbuf,">>> '%s'",next_token.c_str());
 			     DisplayStatus(xbuf);
+		             /*
 			     {
                               int rowX,columnX;
                               get_square_selection(&rowX,&columnX);
 			     }
+			     */
 	                     return;
 	                     break;
         default: break;
@@ -124,12 +136,14 @@ namespace PicoStreamPlayer {
       MoveChessPiece(move_str);
       
       move_state = HAVE_NEXT_MOVE;
-
+      /*
       int rowX = dest_row;
       int columnX = dest_column;
       while( (rowX == dest_row) && (columnX == dest_column) )  {
 	get_square_selection(&rowX,&columnX);
       }
+      */
+      next_token = move_str;
   }
 
   // comments start with '#' - ignore
@@ -137,14 +151,20 @@ namespace PicoStreamPlayer {
   // "move" + engine_move
 
   void to_xboard(std::string tbuf) {
-    DisplayStatus(tbuf.c_str());
-    debug_wait(tbuf.c_str());
-    
-    if (tbuf[0] == '#') {
+    if (tbuf.size() > 18)
+      DisplayToOptions(tbuf.substr(0,17).c_str());
+    else
+      DisplayToOptions(tbuf.c_str());
+    //debug_wait(tbuf.c_str());
+
+    size_t found = tbuf.find("\nmove ");
+    if (found != std::string::npos) {
+      MoveChessPiece((tbuf.substr(found + 6,4)).c_str());
+    } else if (tbuf[0] == '#') {
       // just a comment...
-    } else if (tbuf == "move") {
-      // update gui state...      
-      MoveChessPiece((tbuf.substr(5)).c_str());
+    }
+      else if (tbuf.substr(0,4) == "move") {
+      // something else?...
     }
   }
 }
