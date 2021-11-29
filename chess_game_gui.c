@@ -214,6 +214,12 @@ void DisplayStatus(const char *the_status) {
   GUI_DisString_EN(STATUS_TEXT_X, STATUS_TEXT_Y, the_status, TP_Font, BLACK, WHITE);
 }
 
+void DisplayToOptions(const char *the_status) {
+  sFONT* TP_Font = &Font16;
+  //DrawStatusBorder();
+  GUI_DisString_EN(MENU_ORIGIN_X, MENU_ORIGIN_Y, the_status, TP_Font, BLACK, WHITE);
+}
+
 //***********************************************************************
 // draw the chess board, options and status bars (such as they are)...
 //***********************************************************************
