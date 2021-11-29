@@ -18,11 +18,6 @@ extern "C" {
 
 namespace PicoStreamPlayer {
   int Play(PicoChess::ChessEngine *the_engine);
-
-  void get_next_token(std::string &next_token) {
-  }
-  void to_xboard(std::string tbuf) { 
-  }
 }
 
 int main() {
