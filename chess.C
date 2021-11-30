@@ -11,9 +11,8 @@ extern "C" {
   void DisplayGameBoard();
   void Wait(uint time_in_milliseconds);
   void ClearScreen();
-  int  OptionsSelected(int touch_x, int touch_y);
-  int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
-  void DisplayStatus(char *the_status);
+  int  LoadChessPieceImages();
+  void DrawChessPiecesNewGame();
 }
 
 namespace PicoStreamPlayer {
@@ -22,13 +21,13 @@ namespace PicoStreamPlayer {
 
 int main() {
   GuiStartup();
-  DisplayImage((char *) "chesbrd.bmp");
-  Wait(3000);
+  //DisplayImage((char *) "chesbrd.bmp");
   ClearScreen();
   DisplayGameBoard();
-  stdio_init_all();
+  LoadChessPieceImages();
+  DrawChessPiecesNewGame();
 
-  std::cout << "Pico Chess, Alpha version..." << std::endl;
+  //std::cout << "Pico Chess, Alpha version..." << std::endl;
   
   PicoChess::ChessEngine my_little_engine;
   
