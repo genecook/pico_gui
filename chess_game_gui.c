@@ -112,6 +112,8 @@ void ClearScreen() {
 #define SQUARE_COLOR_LIGHT 65529
 #define SQUARE_COLOR_DARK  1472
 
+#define SQUARE_HIGHLIGHT_COLOR RED
+
 #define BORDER_X BOARD_ORIGIN_X + 1
 #define BORDER_Y BOARD_ORIGIN_Y + 1
 #define BORDER_EXTENT_X BORDER_X + (SQUARE_SIZE * 8) - 2
@@ -264,8 +266,12 @@ void DisplayGameBoard() {
 // after chess board is displayed (via above DisplayGameBoard function),
 // individual board squares may be redrawn via this function...
 
+uint16_t RealSquareColor(int row, int column) {
+  return (board_coords[row][column].square_color == LIGHT) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
+}
+
 void RedrawBoardSquare(int row, int column) {
-  int square_color = (board_coords[row][column].square_color == LIGHT) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
+  int square_color = RealSquareColor(row,column);
   
   GUI_DrawRectangle(board_coords[row][column].upper_left_x,
 		    board_coords[row][column].upper_left_y,
@@ -273,6 +279,63 @@ void RedrawBoardSquare(int row, int column) {
 		    board_coords[row][column].upper_left_y + SQUARE_SIZE,
 		    square_color,
 		    DRAW_FULL, DOT_PIXEL_1X1);
+}
+
+//***********************************************************************
+// to assist when selecting move components...
+//***********************************************************************
+
+#define MAX_HILIGHTS 5
+
+struct square_hilite_coords {
+  uint8_t row;
+  uint8_t column;
+};
+
+struct square_hilite_coords hilited_squares[MAX_HILIGHTS];
+static int hilite_index = -1;
+
+void HilightSquare(int row, int column,int push) {
+  if (push) {
+    if (hilite_index >= MAX_HILIGHTS)
+      return;
+    hilited_squares[hilite_index].row = row;
+    hilited_squares[hilite_index].column = column;
+    hilite_index++;
+  }
+  
+  GUI_DrawRectangle(board_coords[row][column].upper_left_x,
+		    board_coords[row][column].upper_left_y,
+		    board_coords[row][column].upper_left_x + SQUARE_SIZE,
+		    board_coords[row][column].upper_left_y + SQUARE_SIZE,
+		    SQUARE_HIGHLIGHT_COLOR,
+		    DRAW_EMPTY,
+		    DOT_PIXEL_1X1);
+}
+
+void DeHiLiteSquare(int row, int column, int pop) {
+  if (pop) {
+    for (int i = 0; i < hilite_index; i++) {
+      int hrow = hilited_squares[i].row;
+      int hcol = hilited_squares[i].column;
+      GUI_DrawRectangle(board_coords[hrow][hcol].upper_left_x,
+		        board_coords[hrow][hcol].upper_left_y,
+		        board_coords[hrow][hcol].upper_left_x + SQUARE_SIZE,
+		        board_coords[hrow][hcol].upper_left_y + SQUARE_SIZE,
+		        RealSquareColor(hrow,hcol),
+		        DRAW_EMPTY,
+		        DOT_PIXEL_1X1);
+    }
+    hilite_index = -1;
+  } else {
+    GUI_DrawRectangle(board_coords[row][column].upper_left_x,
+		      board_coords[row][column].upper_left_y,
+		      board_coords[row][column].upper_left_x + SQUARE_SIZE,
+		      board_coords[row][column].upper_left_y + SQUARE_SIZE,
+		      RealSquareColor(row,column),
+		      DRAW_EMPTY,
+		      DOT_PIXEL_1X1);
+  }
 }
 
 //***********************************************************************

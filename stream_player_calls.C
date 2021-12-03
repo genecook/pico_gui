@@ -16,6 +16,8 @@ extern "C" {
   void MoveChessPiece(const char *move);
   void DisplayToOptions(const char *the_status);
   void RowColumnToNotation(char *rank,char *file,int row,int column);
+  void HilightSquare(int row, int column,int push);
+  void DeHiLiteSquare(int row, int column,int pop);
 }
 
 namespace PicoStreamPlayer {
@@ -34,6 +36,7 @@ namespace PicoStreamPlayer {
       if (SquareSelected(row,column,touch_x,touch_y))
 	break;
     }
+    HilightSquare(*row,*column,1);    
   }
   
   void debug_wait(const char *prompt) {
@@ -119,6 +122,8 @@ namespace PicoStreamPlayer {
       sprintf(tbuf,">>> %s          ",move_str);
       DisplayStatus(tbuf);
       
+      DeHiLiteSquare(-1,-1,1);
+    
       // move should be validated BEFORE display is updated!
 
       MoveChessPiece(move_str);
