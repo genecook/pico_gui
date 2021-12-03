@@ -40,6 +40,7 @@ include_directories(${PICO_LCD_LIB}/lib/font)
 include_directories(${PICO_LCD_LIB}/lib/fatfs)
 include_directories(${PICO_LCD_LIB}/lib/sdcard)
 
+
 # build line_sweeps executable...
 
 add_executable(line_sweeps line_sweeps.c)
@@ -50,31 +51,6 @@ pico_enable_stdio_uart(line_sweeps 1)
 pico_add_extra_outputs(line_sweeps)
 target_link_libraries(line_sweeps examples lcd font config pico_stdlib hardware_spi fatfs)
 
-# build display_bmp executable...
-
-#add_executable(display_bmp display_bmp.C chess_game_gui.c my_fatfs_storage.c)
-add_subdirectory(${PICO_CHESS}/include pico_chess/include)
-add_subdirectory(${PICO_CHESS}/src pico_chess/src)
-
-include_directories(${PICO_CHESS}/include)
-
-add_executable(display_bmp display_bmp.C chess_game_gui.c stream_player_calls.C
-               my_fatfs_storage.c my_track_touch.c
-               ${PICO_CHESS}/src/pico_stream_player.C
-               ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
-               ${PICO_CHESS}/src/bishop.C ${PICO_CHESS}/src/king.C ${PICO_CHESS}/src/knight.C
-	       ${PICO_CHESS}/src/queen.C ${PICO_CHESS}/src/rook.C ${PICO_CHESS}/src/pawn.C
-               ${PICO_CHESS}/src/moves_tree.C ${PICO_CHESS}/src/moves_tree_minimax.C
-	       ${PICO_CHESS}/src/eval_move.C ${PICO_CHESS}/src/engine.C
-	       )
-
-target_link_libraries(display_bmp examples lcd font config pico_stdlib hardware_spi fatfs)
-	    
-# enable usb output, disable uart output
-pico_enable_stdio_usb(display_bmp 0)
-pico_enable_stdio_uart(display_bmp 1)
-# create map/bin/hex/uf2 file etc.
-pico_add_extra_outputs(display_bmp)
 
 # build track_touch executable...
 
@@ -88,12 +64,13 @@ pico_enable_stdio_uart(track_touch 1)
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(track_touch)
 
+
 # build pico_chess executable...
 
-#add_subdirectory(${PICO_CHESS}/include pico_chess/include)
-#add_subdirectory(${PICO_CHESS}/src pico_chess/src)
+add_subdirectory(${PICO_CHESS}/include pico_chess/include)
+add_subdirectory(${PICO_CHESS}/src pico_chess/src)
 
-#include_directories(${PICO_CHESS}/include)
+include_directories(${PICO_CHESS}/include)
 
 add_executable(pico_chess chess.C chess_game_gui.c stream_player_calls.C
                my_fatfs_storage.c my_track_touch.c
