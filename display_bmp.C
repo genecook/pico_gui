@@ -12,24 +12,8 @@
 extern "C" {
   void GuiStartup();
   void DisplayImage(char *);
-  void DisplayGameBoard();
   void Wait(uint time_in_milliseconds);
   void ClearScreen();
-  int  OptionsSelected(int touch_x, int touch_y);
-  int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
-  void DisplayStatus(const char *the_status);
-  void my_LCD_Show_bmp(char *fname);
-  int  LoadChessPieceImages();
-  void DrawChessPiecesNewGame();
-  void ReadScreenTouch(int *x, int *y);
-  int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
-  void RowColumnToNotation(char *rank,char *file,int row,int column);
-  void MoveChessPiece(const char *move);
-  void DisplayToOptions(const char *the_status);
-}
-
-namespace PicoStreamPlayer {
-  int Play(PicoChess::ChessEngine *the_engine);
 }
 
 int main(void) {
@@ -37,21 +21,9 @@ int main(void) {
     DisplayImage((char *) "chesbrd.bmp");
     Wait(3000);
     ClearScreen();
-    DisplayGameBoard();
-    
-    //my_LCD_Show_bmp((char *) "kdd30.bmp");
-    LoadChessPieceImages();
-    DrawChessPiecesNewGame();
-
-    Wait(3000);
-
     stdio_init_all(); // don't need???
     
     std::cout << "Display BMP formatted image..." << std::endl;
-    
-    PicoChess::ChessEngine my_little_engine;
-  
-    PicoStreamPlayer::Play(&my_little_engine);
 
     return 0;
 }
