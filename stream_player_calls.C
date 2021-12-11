@@ -5,24 +5,13 @@
 
 #include <chess.h>
 
+extern "C" {
+#include <chess_engine_gui.h>
+}
+
 //*****************************************************************************
 // supply 'pico-chess' stream player get_next_token, to_xboard functions...
 //*****************************************************************************
-
-extern "C" {
-  void DisplayStatus(const char *the_status);
-  void ReadScreenTouch(int *x, int *y);
-  int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
-  void MoveChessPiece(const char *move);
-  void DisplayToOptions(const char *the_status);
-  void RowColumnToNotation(char *rank,char *file,int row,int column);
-  void HilightSquare(int row, int column,int push);
-  void DeHiLiteSquare(int row, int column,int pop);
-  int  OptionSelected(int *option_index, int touch_x, int touch_y);
-  int  ConfirmOption(int option_index);
-  void ClearSelectedOption(int option_index);
-  void Wait(uint time_in_milliseconds);
-}
 
 namespace PicoStreamPlayer {
   // "new"  - new game
@@ -34,7 +23,8 @@ namespace PicoStreamPlayer {
   static int move_state = STARTUP;
   
   void get_square_selection(int *row, int *column) {
-    int touch_x,touch_y;  
+    int touch_x,touch_y;
+    
     while(1) {
       ReadScreenTouch(&touch_x, &touch_y);
       int option_index;
@@ -51,30 +41,8 @@ namespace PicoStreamPlayer {
     HilightSquare(*row,*column,1);    
   }
   
-  void debug_wait(const char *prompt) {
-    DisplayStatus(prompt);
-    int rowX,columnX;
-    get_square_selection(&rowX,&columnX);
-  }
-  
   void get_next_token(std::string &next_token) {
-/*
-      int touch_x,touch_y;  
-      int row,column;
 
-      ReadScreenTouch(&touch_x, &touch_y);
-
-      // process options request...
-
-      if (OptionSelected(touch_x, touch_y)) {
-        DisplayStatus("No options yet.");
-	Wait(2000);
-	ClearSelectedOption();
-	return;
-      }
-*/
-
-      char xbuf[20];
       switch(move_state) {
         case STARTUP:        // inform engine that "xboard" is connected...
 	                     next_token = "xboard";
@@ -85,25 +53,14 @@ namespace PicoStreamPlayer {
                              next_token = "usermove";
                              move_str[0] = '\0';
 	                     move_state = MOVE_SEQUENCE_STARTED;
-			     //DisplayStatus(">>> usermove        ");
                              return;
 	                     break;
         case MOVE_SEQUENCE_STARTED:
 	                     // fall thru to get next move...
-	                     //DisplayStatus(">>> get next move   ");
 	                     break;
         case HAVE_NEXT_MOVE: // have a 'next' move...
-	                     //next_token = move_str;
 	                     move_str[0] = '\0';
 	                     move_state = WAITING;
-			     //sprintf(xbuf,">>> '%s'",next_token.c_str());
-			     //DisplayStatus(xbuf);
-		             /*
-			     {
-                              int rowX,columnX;
-                              get_square_selection(&rowX,&columnX);
-			     }
-			     */
 	                     return;
 	                     break;
         default: break;
@@ -117,10 +74,6 @@ namespace PicoStreamPlayer {
       get_square_selection(&src_row,&src_column);
             
       RowColumnToNotation(&src_rank,&src_file,src_row,src_column);
-
-      //char tbuf[128];
-      //sprintf(tbuf,">>> %c%c            ",src_file,src_rank);
-      //DisplayStatus(tbuf);
 
       int dest_row = src_row;
       int dest_column = src_column;
@@ -144,13 +97,6 @@ namespace PicoStreamPlayer {
       MoveChessPiece(move_str);
       
       move_state = HAVE_NEXT_MOVE;
-      /*
-      int rowX = dest_row;
-      int columnX = dest_column;
-      while( (rowX == dest_row) && (columnX == dest_column) )  {
-	get_square_selection(&rowX,&columnX);
-      }
-      */
       next_token = move_str;
   }
 

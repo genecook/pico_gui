@@ -1,0 +1,40 @@
+#ifndef __CHESS_ENGINE_GUI__
+
+  void GuiStartup();
+  void DisplayImage(char *);
+  void Wait(uint time_in_milliseconds);
+  void ClearScreen();
+  void ReadScreenTouch(int *x, int *y);
+  
+  void DisplayGameBoard();
+  void DisplayStatus(const char *the_status);
+  void DisplayToOptions(const char *the_status);
+  
+  int  LoadChessPieceImages();
+  void DrawChessPiecesNewGame();
+  
+  int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
+  void MoveChessPiece(const char *move);
+  void RowColumnToNotation(char *rank,char *file,int row,int column);
+  
+  void HilightSquare(int row, int column,int push);
+  void DeHiLiteSquare(int row, int column,int pop);
+  
+  void PlaceOptionsIcons();
+  int  OptionSelected(int *option_index, int touch_x, int touch_y);
+  int  ConfirmOption(int option_index);
+  void ClearSelectedOption(int option_index);
+
+typedef enum {
+	      SAVE_GAME=0,
+	      RESTORE_GAME,
+	      PLAY_LEVEL,
+	      CHANGE_SIDES,
+	      UNDO_MOVE,
+	      NEW_GAME
+             }
+              OPTIONS;
+
+#endif
+#define __CHESS_ENGINE_GUI__
+

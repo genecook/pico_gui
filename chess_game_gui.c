@@ -14,6 +14,8 @@
 #include "fatfs_storage.h"
 #include <string.h>
 
+#include <chess_engine_gui.h>
+
 void InitTouchPanel( LCD_SCAN_DIR Lcd_ScanDir );
 void ReadTouch(POINT *x, POINT *y);
 void RowColumnToNotation(char *rank,char *file,int row,int column);
@@ -866,8 +868,6 @@ void PlaceOptionsIcons() {
 //***********************************************************************
 // return true if some option selected...
 //***********************************************************************
-
-//static uint16_t option_index = NO_OPTION_SELECTED;
 
 int OptionSelected(int *option_index, int touch_x, int touch_y) {
 
