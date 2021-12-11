@@ -16,6 +16,8 @@ include(pico_sdk_import)
 set(PICO_LCD_LIB $ENV{HOME}/Desktop/pico/Pico-ResTouch-LCD-X_X_Code/c)
 set(PICO_CHESS $ENV{HOME}/Desktop/pico_chess)
 
+set(PICO_CHESS_GUI $ENV{HOME}/Desktop/pico_gui)
+
 project(my_gui C CXX ASM)
 
 set(CMAKE_BUILD_TYPE Debug)
@@ -71,6 +73,8 @@ add_subdirectory(${PICO_CHESS}/include pico_chess/include)
 add_subdirectory(${PICO_CHESS}/src pico_chess/src)
 
 include_directories(${PICO_CHESS}/include)
+
+include_directories(${PICO_CHESS_GUI})
 
 add_executable(pico_chess chess.C chess_game_gui.c stream_player_calls.C
                my_fatfs_storage.c my_track_touch.c

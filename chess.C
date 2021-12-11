@@ -4,6 +4,7 @@
 #include "pico/stdlib.h"
 
 #include <chess.h>
+#include <chess_engine_gui.h>
 
 extern "C" {
   void GuiStartup();
@@ -13,6 +14,7 @@ extern "C" {
   void ClearScreen();
   int  LoadChessPieceImages();
   void DrawChessPiecesNewGame();
+  void PlaceOptionsIcons();
 }
 
 namespace PicoStreamPlayer {
@@ -21,16 +23,15 @@ namespace PicoStreamPlayer {
 
 int main() {
   GuiStartup();
-  //DisplayImage((char *) "chesbrd.bmp");
   ClearScreen();
   DisplayGameBoard();
   LoadChessPieceImages();
   DrawChessPiecesNewGame();
+  PlaceOptionsIcons();
 
-  //std::cout << "Pico Chess, Alpha version..." << std::endl;
-  
+  std::cout << "Pico Chess, Alpha version..." << std::endl;
+
   PicoChess::ChessEngine my_little_engine;
-  
   PicoStreamPlayer::Play(&my_little_engine);
   
   return 0;

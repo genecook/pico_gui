@@ -18,6 +18,10 @@ extern "C" {
   void RowColumnToNotation(char *rank,char *file,int row,int column);
   void HilightSquare(int row, int column,int push);
   void DeHiLiteSquare(int row, int column,int pop);
+  int  OptionSelected(int *option_index, int touch_x, int touch_y);
+  int  ConfirmOption(int option_index);
+  void ClearSelectedOption(int option_index);
+  void Wait(uint time_in_milliseconds);
 }
 
 namespace PicoStreamPlayer {
@@ -28,12 +32,20 @@ namespace PicoStreamPlayer {
   enum { STARTUP, WAITING, MOVE_SEQUENCE_STARTED, HAVE_NEXT_MOVE };
   
   static int move_state = STARTUP;
-
+  
   void get_square_selection(int *row, int *column) {
     int touch_x,touch_y;  
     while(1) {
       ReadScreenTouch(&touch_x, &touch_y);
-      if (SquareSelected(row,column,touch_x,touch_y))
+      int option_index;
+      if (OptionSelected(&option_index, touch_x, touch_y)) {
+	if (ConfirmOption(option_index))
+          DisplayStatus("Option confirmed.");
+	else
+          DisplayStatus("Selected aborted.");
+        ClearSelectedOption(option_index);
+      } 
+      else if (SquareSelected(row,column,touch_x,touch_y))
 	break;
     }
     HilightSquare(*row,*column,1);    
@@ -46,7 +58,7 @@ namespace PicoStreamPlayer {
   }
   
   void get_next_token(std::string &next_token) {
-    /*
+/*
       int touch_x,touch_y;  
       int row,column;
 
@@ -54,12 +66,14 @@ namespace PicoStreamPlayer {
 
       // process options request...
 
-      if (OptionsSelected(touch_x, touch_y)) {
+      if (OptionSelected(touch_x, touch_y)) {
         DisplayStatus("No options yet.");
+	Wait(2000);
+	ClearSelectedOption();
 	return;
       }
 */
-      
+
       char xbuf[20];
       switch(move_state) {
         case STARTUP:        // inform engine that "xboard" is connected...
@@ -71,19 +85,19 @@ namespace PicoStreamPlayer {
                              next_token = "usermove";
                              move_str[0] = '\0';
 	                     move_state = MOVE_SEQUENCE_STARTED;
-			     DisplayStatus(">>> usermove        ");
+			     //DisplayStatus(">>> usermove        ");
                              return;
 	                     break;
         case MOVE_SEQUENCE_STARTED:
 	                     // fall thru to get next move...
-	                     DisplayStatus(">>> get next move   ");
+	                     //DisplayStatus(">>> get next move   ");
 	                     break;
         case HAVE_NEXT_MOVE: // have a 'next' move...
 	                     //next_token = move_str;
 	                     move_str[0] = '\0';
 	                     move_state = WAITING;
-			     sprintf(xbuf,">>> '%s'",next_token.c_str());
-			     DisplayStatus(xbuf);
+			     //sprintf(xbuf,">>> '%s'",next_token.c_str());
+			     //DisplayStatus(xbuf);
 		             /*
 			     {
                               int rowX,columnX;
@@ -104,9 +118,9 @@ namespace PicoStreamPlayer {
             
       RowColumnToNotation(&src_rank,&src_file,src_row,src_column);
 
-      char tbuf[128];
-      sprintf(tbuf,">>> %c%c            ",src_file,src_rank);
-      DisplayStatus(tbuf);
+      //char tbuf[128];
+      //sprintf(tbuf,">>> %c%c            ",src_file,src_rank);
+      //DisplayStatus(tbuf);
 
       int dest_row = src_row;
       int dest_column = src_column;
@@ -119,7 +133,8 @@ namespace PicoStreamPlayer {
 
       sprintf(move_str,"%c%c%c%c",src_file,src_rank,dest_file,dest_rank);
 
-      sprintf(tbuf,">>> %s          ",move_str);
+      char tbuf[128];
+      sprintf(tbuf,"users move: %s",move_str);
       DisplayStatus(tbuf);
       
       DeHiLiteSquare(-1,-1,1);
@@ -144,20 +159,29 @@ namespace PicoStreamPlayer {
   // "move" + engine_move
 
   void to_xboard(std::string tbuf) {
-    if (tbuf.size() > 18)
-      DisplayToOptions(tbuf.substr(0,17).c_str());
-    else
-      DisplayToOptions(tbuf.c_str());
-    //debug_wait(tbuf.c_str());
 
     size_t found = tbuf.find("\nmove ");
+    
     if (found != std::string::npos) {
       MoveChessPiece((tbuf.substr(found + 6,4)).c_str());
-    } else if (tbuf[0] == '#') {
+      DisplayStatus(("cpu move: " + tbuf.substr(found + 6,4)).c_str());
+      return;
+    }
+
+    if (tbuf[0] == '#') {
       // just a comment...
+      if (tbuf.size() > 18)
+        DisplayStatus(tbuf.substr(0,17).c_str());
+      else
+        DisplayStatus(tbuf.c_str());
+      return;
     }
-      else if (tbuf.substr(0,4) == "move") {
-      // something else?...
-    }
+
+    // something else?...
+
+    if (tbuf.size() > 18)
+      DisplayStatus(("?" + tbuf.substr(0,17)).c_str());
+    else
+      DisplayStatus(("?" + tbuf).c_str());
   }
 }

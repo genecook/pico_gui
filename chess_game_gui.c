@@ -7,12 +7,12 @@
 #include "DEV_Config.h"
 
 #include <stdio.h>
-
 #include "hardware/watchdog.h"
 
 #include "pico/stdlib.h"
 #include "ff.h"
 #include "fatfs_storage.h"
+#include <string.h>
 
 void InitTouchPanel( LCD_SCAN_DIR Lcd_ScanDir );
 void ReadTouch(POINT *x, POINT *y);
@@ -104,6 +104,16 @@ void ClearScreen() {
 #define BOARD_ORIGIN_Y MENU_SELECT_Y_EXTENT + 20
 #define SQUARE_SIZE    30
 
+// rough dimensions for button. see button code...
+#define BUTTON_WIDTH    35
+#define BUTTON_HEIGHT   20
+#define BUTTON_OFFSET_X 5
+#define BUTTON_OFFSET_Y 5
+#define BUTTON_FONT     Font12
+#define BUTTON_COLOR    WHITE
+
+#define DIALOG_FONT     Font12
+
 //#define SQUARE_COLOR_LIGHT YELLOW
 //#define SQUARE_COLOR_DARK  BROWN
 
@@ -129,15 +139,6 @@ void ClearScreen() {
 #define STATUS_TEXT_X STATUS_X + 8
 #define STATUS_TEXT_Y STATUS_Y + 8
   
-//***********************************************************************
-// return true if options 'bar' touched...
-//***********************************************************************
-
-int OptionsSelected(int touch_x, int touch_y) {
-  return ( (touch_x > MENU_SELECT_X) && (touch_x < MENU_SELECT_X_EXTENT) &&
-	   (touch_y > MENU_SELECT_Y) && (touch_y < MENU_SELECT_Y_EXTENT) );
-}
-
 //***********************************************************************
 // when the chess board is drawn, the coordinates for each square are
 // stored in board_coords...
@@ -213,7 +214,10 @@ void DrawStatusBorder() {
 void DisplayStatus(const char *the_status) {
   sFONT* TP_Font = &Font16;
   DrawStatusBorder();
-  GUI_DisString_EN(STATUS_TEXT_X, STATUS_TEXT_Y, the_status, TP_Font, BLACK, WHITE);
+  GUI_DisString_EN(STATUS_TEXT_X, STATUS_TEXT_Y, "                    ", TP_Font, BLACK, WHITE);
+  char tbuf[20];
+  sprintf(tbuf,"> %s",the_status);
+  GUI_DisString_EN(STATUS_TEXT_X, STATUS_TEXT_Y, tbuf, TP_Font, BLACK, WHITE);
 }
 
 void DisplayToOptions(const char *the_status) {
@@ -229,8 +233,6 @@ void DisplayToOptions(const char *the_status) {
 void DisplayGameBoard() {
   sFONT* TP_Font = &Font16;
   
-  GUI_DisString_EN(MENU_ORIGIN_X, MENU_ORIGIN_Y, "Options", TP_Font, BLACK, WHITE);
-
   int square_color = SQUARE_COLOR_LIGHT;
   
   for (int i = 0; i < 8; i++) {
@@ -549,10 +551,6 @@ int LoadChessPieceImages() {
   if (ReadChessPieceBMP(piece_icons_ll.rook,   "rll30.bmp")) return -1;
   if (ReadChessPieceBMP(piece_icons_ll.pawn,   "pll30.bmp")) return -1;
 
-#ifdef DEBUG
-  printf("Chess piece images loaded successfully!\n");
-#endif
-
   return 0;
 }
 
@@ -644,7 +642,7 @@ void RemovePiece(char file, char rank) {
 void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
   int x, y;
   BoardToScreenCoords(&x,&y,file,rank);
-
+  
   uint16_t (*image)[PIXELS_PER_ROW];
   
   switch((piece_color << 1) | SquareColor(file,rank)) {
@@ -771,5 +769,206 @@ void MoveChessPiece(const char *move) {
   RemovePiece(starting_file,starting_rank);
   PlaceChessPiece(end_file,end_rank,piece_type,piece_color);
 }
+
+//***********************************************************************
+// buttons...
+//***********************************************************************
+
+// based on the lcd screen size can get as many as six buttons
+// (yea, might as well be hard coded, sigh)
+
+#define BUTTON_0_X MENU_ORIGIN_X + 2
+#define BUTTON_0_Y MENU_ORIGIN_Y + 5
+
+#define BUTTON_SPAN BUTTON_WIDTH + BUTTON_OFFSET_X
+
+#define BUTTON_1_X BUTTON_0_X + BUTTON_SPAN 
+#define BUTTON_1_Y BUTTON_0_Y
+
+#define BUTTON_2_X BUTTON_1_X + BUTTON_SPAN
+#define BUTTON_2_Y BUTTON_1_Y
+
+#define BUTTON_3_X BUTTON_2_X + BUTTON_SPAN
+#define BUTTON_3_Y BUTTON_2_Y
+
+#define BUTTON_4_X BUTTON_3_X + BUTTON_SPAN - 2
+#define BUTTON_4_Y BUTTON_3_Y
+
+#define BUTTON_5_X BUTTON_4_X + BUTTON_SPAN - 2
+#define BUTTON_5_Y BUTTON_4_Y
+
+#define BUTTON_TEXT_OFFSET_X 5
+#define BUTTON_TEXT_OFFSET_Y 5
+
+void DrawButton(uint16_t origin_x, uint16_t origin_y, char *button_text, int do_hilite) {
+  uint16_t fill_option = do_hilite ? DRAW_FULL : DRAW_EMPTY;
+
+  // 'erase', ie, write over previous button in case it had previously been hilited...
+  GUI_DrawRectangle(origin_x, origin_y,
+		    origin_x + BUTTON_WIDTH, origin_y + BUTTON_HEIGHT,
+		    BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+    
+  GUI_DrawRectangle(origin_x, origin_y,
+		    origin_x + BUTTON_WIDTH, origin_y + BUTTON_HEIGHT,
+		    BUTTON_COLOR, fill_option, DOT_PIXEL_1X1);
+
+  sFONT* TP_Font = &BUTTON_FONT;
+
+  // fudge 'centering' the button text:
+  uint16_t text_offset = strlen(button_text) < 4 ? 2 : 0;
+
+  uint16_t font_background_color = do_hilite ? BUTTON_COLOR : BLACK;
+  uint16_t font_color = do_hilite ? BLACK : BUTTON_COLOR;
+  
+  GUI_DisString_EN(origin_x + BUTTON_TEXT_OFFSET_X + text_offset,
+		   origin_y + BUTTON_TEXT_OFFSET_Y,
+		   button_text,
+		   TP_Font, font_background_color, font_color);
+}
+
+struct push_button {
+  uint16_t  x;
+  uint16_t  y;
+  char     *button_text;
+  char     *help_text;
+};
+
+struct push_button options[] = {
+  { BUTTON_0_X, BUTTON_0_Y, "SAVE", "Save game?"         },
+  { BUTTON_1_X, BUTTON_1_Y, "REST", "Restore game?"      },
+
+  { BUTTON_2_X, BUTTON_2_Y, "LEVL", "Change play level?" },
+  { BUTTON_3_X, BUTTON_3_Y, "SIDE", "Change sides?"      },
+
+  { BUTTON_4_X, BUTTON_4_Y, "UNDO", "Undo last move?"    },
+  { BUTTON_5_X, BUTTON_5_Y, "NEW",  "New game?"          }
+};
+
+// keep these in order!
+
+#define SAVE_GAME    0
+#define RESTORE_GAME 1
+#define PLAY_LEVEL   2
+#define SIDE         3 
+#define UNDO_MOVE    4
+#define NEW_GAME     5
+
+#define NO_OPTION_SELECTED -1
+
+#define NUM_OPTIONS 6
+
+void PlaceOptionsIcons() {
+  for (int i = 0; i < NUM_OPTIONS; i++) {
+    DrawButton(options[i].x, options[i].y, options[i].button_text,0);
+  }
+}
+
+//***********************************************************************
+// return true if some option selected...
+//***********************************************************************
+
+//static uint16_t option_index = NO_OPTION_SELECTED;
+
+int OptionSelected(int *option_index, int touch_x, int touch_y) {
+
+  for (int i = 0; i < NUM_OPTIONS; i++) {
+    uint16_t xs = options[i].x;
+    uint16_t ys = options[i].y;
+    uint16_t xe = xs + BUTTON_WIDTH;
+    uint16_t ye = ys + BUTTON_HEIGHT;
+    
+    if ( (touch_x > xs) && (touch_x < xe) && (touch_y > ys) && (touch_y < ye) ) {
+      *option_index = i;
+      DrawButton(options[i].x,options[i].y,options[i].button_text,1);
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+void ClearSelectedOption(int option_index) {
+  DrawButton(options[option_index].x,options[option_index].y,
+	     options[option_index].button_text,0);
+}
+
+int ConfirmOption(int option_index) {
+  // erase section in middle of display...
+  uint16_t confirm_box_ulx = board_coords[1][3].upper_left_x;
+  uint16_t confirm_box_uly = board_coords[1][3].upper_left_y;
+  uint16_t confirm_box_lrx = board_coords[5][3].lower_right_x;
+  uint16_t confirm_box_lry = board_coords[5][3].lower_right_y;
+
+  GUI_DrawRectangle(confirm_box_ulx, confirm_box_uly,
+		    confirm_box_lrx, confirm_box_lry,
+		    BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+  
+  // post text for this option...put on dialog box 1st row
+
+  DisplayStatus(options[option_index].help_text);
+  
+  uint16_t row1_text_box_ulx = confirm_box_ulx + 3;
+  uint16_t row1_text_box_uly = confirm_box_uly + 5;
+  
+  sFONT* TP_Font = &DIALOG_FONT;
+  
+  GUI_DisString_EN(row1_text_box_ulx, row1_text_box_uly,
+		   "Confirm selection:",
+		   TP_Font, BLACK, WHITE);
+
+  uint16_t click_box_ulx = board_coords[5][3].upper_left_x + 10;
+  uint16_t click_box_uly = board_coords[5][3].upper_left_y + 4;
+  uint16_t click_box_lrx = click_box_ulx + 15;
+  uint16_t click_box_lry = click_box_uly + 15;
+
+  GUI_DrawRectangle(click_box_ulx, click_box_uly,
+		    click_box_lrx, click_box_lry,
+                    BORDER_COLOR, DRAW_EMPTY, DOT_PIXEL_1X1);
+
+  // post confirm? + 'click-box', then wait for touch response...
+
+  int option_confirmed = 0;
+
+  // wait 'til some touch event...
+  
+  int sx,sy;
+  ReadScreenTouch(&sx, &sy);
+
+  int x = sx,y = sy;
+
+  while( (x == sx) && (y == sy) ) {
+    ReadScreenTouch(&x, &y);
+  }
+  
+  if ( (x >= click_box_ulx) && (x < click_box_lrx) && (y >= click_box_uly) && (y < click_box_lry) )
+    option_confirmed = 1;
+  
+  // again, erase section in middle of display...
+  
+  GUI_DrawRectangle(confirm_box_ulx, confirm_box_uly,
+		    confirm_box_lrx, confirm_box_lry,
+		    BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+  
+  // redraw obscured portion of game board...
+
+  for (int i = 1; i <= 5; i++) {
+    for (int j = 3; j <= 3; j++) {
+       RedrawBoardSquare(i,j);
+       uint8_t piece_type,piece_color;
+       GetPieceInfo(&piece_type,&piece_color,i,j);
+       if (piece_type == EMPTY)
+	 continue;
+       char rank,file;
+       RowColumnToNotation(&rank,&file,i,j);
+       PlaceChessPiece(file,rank,piece_type,piece_color);
+    }
+  }
+
+  // return indicator that option was indeed selected...
+
+  return option_confirmed;
+}
+
+
 
 
