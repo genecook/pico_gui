@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <string>
+#include <queue>
 #include "pico/stdlib.h"
 
 #include <chess.h>
@@ -14,74 +15,43 @@ extern "C" {
 //*****************************************************************************
 
 namespace PicoStreamPlayer {
-  // "new"  - new game
-  // "usermove" - next token is move 
-  static char move_str[80];
 
-  enum { STARTUP, WAITING, MOVE_SEQUENCE_STARTED, HAVE_NEXT_MOVE };
+  //************************************************************************
+  // read from touch panel, see if somthing interesting has been selected...
+  //************************************************************************
   
-  static int move_state = STARTUP;
-  
-  void get_square_selection(int *row, int *column) {
+  int get_next_selection(int *row, int *column) {
     int touch_x,touch_y;
+
+    int selection_index = NO_SELECTION;
     
-    while(1) {
-      ReadScreenTouch(&touch_x, &touch_y);
-      int option_index;
-      if (OptionSelected(&option_index, touch_x, touch_y)) {
-	if (ConfirmOption(option_index))
-          DisplayStatus("Option confirmed.");
-	else
-          DisplayStatus("Selected aborted.");
-        ClearSelectedOption(option_index);
-      } 
-      else if (SquareSelected(row,column,touch_x,touch_y))
-	break;
+    ReadScreenTouch(&touch_x, &touch_y);
+      
+    int option_index;
+      
+    if (OptionSelected(&option_index, touch_x, touch_y)) {
+      if (ConfirmOption(option_index)) {
+        DisplayStatus("Option confirmed.");
+	selection_index = option_index;
+      } else
+        DisplayStatus("Selected aborted.");
+      ClearSelectedOption(option_index);
     }
-    HilightSquare(*row,*column,1);    
+    else if (SquareSelected(row,column,touch_x,touch_y)) {
+      HilightSquare(*row,*column,1);    
+      selection_index = SQUARE_SELECTED;
+    }
+      
+    return selection_index;
   }
+
+  //***********************************************************************
+  // have the src/dest squares for a move, encode in standard notation...
+  //***********************************************************************
   
-  void get_next_token(std::string &next_token) {
-
-      switch(move_state) {
-        case STARTUP:        // inform engine that "xboard" is connected...
-	                     next_token = "xboard";
-	                     move_state = WAITING;
-                             return;
-	                     break;
-        case WAITING:        // start move sequence by returning 'usermove' token...
-                             next_token = "usermove";
-                             move_str[0] = '\0';
-	                     move_state = MOVE_SEQUENCE_STARTED;
-                             return;
-	                     break;
-        case MOVE_SEQUENCE_STARTED:
-	                     // fall thru to get next move...
-	                     break;
-        case HAVE_NEXT_MOVE: // have a 'next' move...
-	                     move_str[0] = '\0';
-	                     move_state = WAITING;
-	                     return;
-	                     break;
-        default: break;
-      }
-      
-      // get next move...
-      
+  void encode_echo_move(char *move_str,int src_row,int src_column,int dest_row,int dest_column) {
       char src_rank,src_file,dest_rank,dest_file;
-
-      int src_row, src_column;
-      get_square_selection(&src_row,&src_column);
-            
       RowColumnToNotation(&src_rank,&src_file,src_row,src_column);
-
-      int dest_row = src_row;
-      int dest_column = src_column;
-      
-      while( (dest_row == src_row) && (dest_column == src_column) )  {
-	get_square_selection(&dest_row,&dest_column);
-      }
-      
       RowColumnToNotation(&dest_rank,&dest_file,dest_row,dest_column);
 
       sprintf(move_str,"%c%c%c%c",src_file,src_rank,dest_file,dest_rank);
@@ -90,27 +60,181 @@ namespace PicoStreamPlayer {
       sprintf(tbuf,"users move: %s",move_str);
       DisplayStatus(tbuf);
       
-      DeHiLiteSquare(-1,-1,1);
-    
-      // move should be validated BEFORE display is updated!
+      DeHiLiteSquare(-1,-1,1);    
+  }
+  
+  //***************************************************************************
+  // Invoked by the chess engine, this routine gets next move or directive
+  //   from gui...
+  //*************************************************************************** 
 
-      MoveChessPiece(move_str);
-      
-      move_state = HAVE_NEXT_MOVE;
-      next_token = move_str;
+  enum { STARTUP, WAITING, MOVE_IN_PROGRESS, PROCESSING_MOVE,
+	 PROCESSING_SAVE_GAME, PROCESSING_RESTORE_GAME, PROCESSING_PLAY_LEVEL,
+	 PROCESSING_CHANGE_SIDES, PROCESSING_UNDO, PROCESSING_NEW_GAME
+       }
+        move_states;
+  
+  static int move_state = STARTUP; // current move state
+
+  std::queue<std::string> token_queue;
+
+
+  void get_next_token(std::string &next_token) {
+    // process any queued up tokens first...
+    
+    if (!token_queue.empty()) {
+      next_token = token_queue.front();
+      token_queue.pop();
+      return;
+    }
+
+    // no tokens. fine, lets get some...
+    
+    int next_selection,start_row,start_column,end_row,end_column;
+    char move_str[80];	
+
+    // loop 'til there are tokens queued up...
+    
+    while(token_queue.empty()) { 
+      switch(move_state) {
+        case STARTUP:           // inform engine that "xboard" is connected...
+	                        token_queue.push("xboard");
+	                        move_state = WAITING;
+	                        break;
+			     
+        case WAITING:           // waiting on user...
+	                        next_selection = get_next_selection(&start_row,&start_column);
+
+				switch(next_selection) {
+				  case SQUARE_SELECTED: move_state = MOVE_IN_PROGRESS;        break;
+			          case SAVE_GAME:       move_state = PROCESSING_SAVE_GAME;    break;
+			          case RESTORE_GAME:    move_state = PROCESSING_RESTORE_GAME; break;
+			          case PLAY_LEVEL:      move_state = PROCESSING_PLAY_LEVEL;   break;
+			          case CHANGE_SIDES:    move_state = PROCESSING_CHANGE_SIDES; break;
+			          case UNDO_MOVE:       move_state = PROCESSING_UNDO;         break;
+			          case NEW_GAME:        move_state = PROCESSING_NEW_GAME;     break;
+			          default: break;
+			        }
+                                break;
+				
+        case PROCESSING_SAVE_GAME:    // save game to flash...
+	                              DisplayStatus("Save game? Not yet.");
+	                              move_state = WAITING;
+	                              break;
+				      
+        case PROCESSING_RESTORE_GAME: // restore previously saved game from flash...
+	                              DisplayStatus("Restore game? Not yet.");
+	                              move_state = WAITING;
+	                              break;
+				      
+        case PROCESSING_PLAY_LEVEL:   // change game engine play level...
+	                              DisplayStatus("Change play level? Nein.");
+	                              move_state = WAITING;
+	                              break;
+				      
+        case PROCESSING_CHANGE_SIDES: // change sides...
+	                              DisplayStatus("Change sides? Nyet.");
+	                              move_state = WAITING;
+	                              break;
+				      
+        case PROCESSING_UNDO:         // undo last move...
+	                              DisplayStatus("Undo last move? Nada.");
+	                              move_state = WAITING;
+	                              break;
+				      
+        case PROCESSING_NEW_GAME:     // setup new game...
+	                              DisplayStatus("New game? Nunca.");
+	                              move_state = WAITING;
+	                              break;
+
+        case MOVE_IN_PROGRESS: // waiting 'til move completes or aborts...
+	                       next_selection = get_next_selection(&end_row,&end_column);
+			       switch(next_selection) {
+			         case NO_SELECTION:    // waiting on dest square selection to complete move...
+			                               break;
+			         case SQUARE_SELECTED: // make sure we have a new square selected...
+				                       if ( (end_row==start_row) && (end_column==start_column) )
+							 break;
+						       else
+			                                 move_state = PROCESSING_MOVE;
+			                               break;
+			         default:              // selection made that is NOT dest square? fine,
+				                       // clear state and continue...
+				                       DisplayStatus("Move aborted.");      
+                                                       DeHiLiteSquare(-1,-1,1);    
+				                       move_state = WAITING;
+	                                               break;
+			       }
+			       break;
+				
+        case PROCESSING_MOVE: // queue up next move. engine to validate same and update game board...
+                              encode_echo_move(move_str,start_row,start_column,end_row,end_column);
+                              token_queue.push("checkmove");
+			      token_queue.push(move_str);
+                              move_state = WAITING;
+			      break;
+
+        default: break;
+      }
+    }
   }
 
+  //***************************************************************************
+  // update gui from chess engine...
+  //
   // comments start with '#' - ignore
   // access comments with prefix '# BBB"
   // "move" + engine_move
+  //
+  // what we expect from xboard:
+  //   # BBB xboard
+  //   feature usermove=1 debug=1 sigint=0 sigterm=0 done=1
+  //   # BBB OK move
+  //   checkmove e2e4
+  //   # BBB usermove e2e4
+  //   # BBB engine to make move...
+  //   # BBB engine move made: # of levels: 3, number of moves evaluated: 20435\nmove g8f6
+  //   # BBB BAD move
+  //   move e8g8 - castle, black, kings side   -+
+  //   move e8a8 -   "       "    queens side   +- in all cases, gui needs to recognize
+  //   move e1g1 -   "     white  kings side    |   castling and update rooks position
+  //   move e1a1 -   "       "    queens side  -+
+  //***************************************************************************
 
+  void check_for_castling(std::string possible_castling_move) {
+    if (KingsMove(possible_castling_move.c_str())) {
+      if      (possible_castling_move == "e8g8") MoveChessPiece("h8f8");
+      else if (possible_castling_move == "e8c8") MoveChessPiece("a8d8");
+      else if (possible_castling_move == "e1g1") MoveChessPiece("h1f1");
+      else if (possible_castling_move == "e1c1") MoveChessPiece("a1d1");
+    }
+  }
+  
   void to_xboard(std::string tbuf) {
+    if (tbuf.substr(0,7) == "feature") {
+      // ignore xboard 'feature' request...
+      return;
+    }
+    
+    size_t found = tbuf.find("checkmove ");
 
-    size_t found = tbuf.find("\nmove ");
+    if (found != std::string::npos) {
+      // users move has been validated; update game board...
+      std::string users_move = tbuf.substr(found + 10,4);
+      MoveChessPiece(users_move.c_str()); //???
+      check_for_castling(users_move);
+      DisplayStatus(("user move: " + users_move).c_str()); 
+      return;
+    }
+    
+    found = tbuf.find("\nmove ");
     
     if (found != std::string::npos) {
-      MoveChessPiece((tbuf.substr(found + 6,4)).c_str());
-      DisplayStatus(("cpu move: " + tbuf.substr(found + 6,4)).c_str());
+      // update game board with computers move...
+      std::string cpu_move = tbuf.substr(found + 6,4); 
+      MoveChessPiece(cpu_move.c_str());
+      check_for_castling(cpu_move);
+      DisplayStatus(("cpu move: " + cpu_move).c_str());
       return;
     }
 
@@ -130,4 +254,5 @@ namespace PicoStreamPlayer {
     else
       DisplayStatus(("?" + tbuf).c_str());
   }
+
 }

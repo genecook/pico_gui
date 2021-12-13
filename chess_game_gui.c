@@ -254,13 +254,13 @@ void DisplayGameBoard() {
       
       board_coords[i][j].square_color = (square_color == SQUARE_COLOR_DARK) ? DARK : LIGHT;
 
-      // square colors alternate of course...
+      // square colors alternate within row...
       square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
     }
-    
+    // and from one row to the next...
     square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
   }
-
+  
   GUI_DrawRectangle(BORDER_X, BORDER_Y, BORDER_EXTENT_X, BORDER_EXTENT_Y,
 		    BORDER_COLOR, DRAW_EMPTY, DOT_PIXEL_1X1);
 
@@ -279,8 +279,8 @@ void RedrawBoardSquare(int row, int column) {
   
   GUI_DrawRectangle(board_coords[row][column].upper_left_x,
 		    board_coords[row][column].upper_left_y,
-		    board_coords[row][column].upper_left_x + SQUARE_SIZE,
-		    board_coords[row][column].upper_left_y + SQUARE_SIZE,
+		    board_coords[row][column].lower_right_x,
+		    board_coords[row][column].lower_right_y,
 		    square_color,
 		    DRAW_FULL, DOT_PIXEL_1X1);
 }
@@ -301,17 +301,17 @@ static int hilite_index = -1;
 
 void HilightSquare(int row, int column,int push) {
   if (push) {
+    hilite_index++;
     if (hilite_index >= MAX_HILIGHTS)
       return;
     hilited_squares[hilite_index].row = row;
     hilited_squares[hilite_index].column = column;
-    hilite_index++;
   }
   
   GUI_DrawRectangle(board_coords[row][column].upper_left_x,
 		    board_coords[row][column].upper_left_y,
-		    board_coords[row][column].upper_left_x + SQUARE_SIZE,
-		    board_coords[row][column].upper_left_y + SQUARE_SIZE,
+		    board_coords[row][column].lower_right_x,
+		    board_coords[row][column].lower_right_y,
 		    SQUARE_HIGHLIGHT_COLOR,
 		    DRAW_EMPTY,
 		    DOT_PIXEL_1X1);
@@ -324,8 +324,8 @@ void DeHiLiteSquare(int row, int column, int pop) {
       int hcol = hilited_squares[i].column;
       GUI_DrawRectangle(board_coords[hrow][hcol].upper_left_x,
 		        board_coords[hrow][hcol].upper_left_y,
-		        board_coords[hrow][hcol].upper_left_x + SQUARE_SIZE,
-		        board_coords[hrow][hcol].upper_left_y + SQUARE_SIZE,
+		        board_coords[hrow][hcol].lower_right_x,
+		        board_coords[hrow][hcol].lower_right_y,
 		        RealSquareColor(hrow,hcol),
 		        DRAW_EMPTY,
 		        DOT_PIXEL_1X1);
@@ -334,8 +334,8 @@ void DeHiLiteSquare(int row, int column, int pop) {
   } else {
     GUI_DrawRectangle(board_coords[row][column].upper_left_x,
 		      board_coords[row][column].upper_left_y,
-		      board_coords[row][column].upper_left_x + SQUARE_SIZE,
-		      board_coords[row][column].upper_left_y + SQUARE_SIZE,
+		      board_coords[row][column].lower_right_x,
+		      board_coords[row][column].lower_right_y,
 		      RealSquareColor(row,column),
 		      DRAW_EMPTY,
 		      DOT_PIXEL_1X1);
@@ -631,8 +631,9 @@ int SquareColor(char file, char rank) {
 
 void RemovePiece(char file, char rank) {
   int row, column;
-  
+
   NotationToRowColumn(&row,&column,file,rank);
+
   UpdateDisplayBoardState(row,column,EMPTY,LIGHT,REMOVE_PIECE);
   RedrawBoardSquare(row, column);
 }
@@ -645,7 +646,7 @@ void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
   int x, y;
   BoardToScreenCoords(&x,&y,file,rank);
   
-  uint16_t (*image)[PIXELS_PER_ROW];
+  uint16_t (*image)[PIXELS_PER_ROW] = NULL;
   
   switch((piece_color << 1) | SquareColor(file,rank)) {
   case (LIGHT << 1) | LIGHT:
@@ -694,8 +695,11 @@ void PlaceChessPiece(char file, char rank, int piece_index, int piece_color) {
     break;
   default: break;
   }
-  
-  DrawImage(x,y,image,NUM_PIXEL_ROWS,PIXELS_PER_ROW);
+
+  if (image == NULL) {
+    // what the ???
+  } else     
+    DrawImage(x,y,image,NUM_PIXEL_ROWS,PIXELS_PER_ROW);
 
   int row,column;
   NotationToRowColumn(&row,&column,file,rank);
@@ -742,6 +746,23 @@ void DrawChessPiecesNewGame() {
   PlaceChessPiece('f', '7', PAWN,   DARK);
   PlaceChessPiece('g', '7', PAWN,   DARK);
   PlaceChessPiece('h', '7', PAWN,   DARK);
+}
+
+//***********************************************************************
+// does this move involve the king???
+//***********************************************************************
+
+int KingsMove(const char *move) {
+  char starting_file = move[0];
+  char starting_rank = move[1];
+
+  uint8_t piece_type,piece_color;
+
+  int row,column;
+  NotationToRowColumn(&row,&column,starting_file,starting_rank);
+  GetPieceInfo(&piece_type,&piece_color,row,column);
+
+  return (piece_type == KING);
 }
 
 //***********************************************************************

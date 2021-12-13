@@ -15,6 +15,7 @@
   
   int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
   void MoveChessPiece(const char *move);
+  int  KingsMove(const char *move);
   void RowColumnToNotation(char *rank,char *file,int row,int column);
   
   void HilightSquare(int row, int column,int push);
@@ -31,7 +32,9 @@ typedef enum {
 	      PLAY_LEVEL,
 	      CHANGE_SIDES,
 	      UNDO_MOVE,
-	      NEW_GAME
+	      NEW_GAME,
+	      SQUARE_SELECTED,
+	      NO_SELECTION = -1
              }
               OPTIONS;
 
