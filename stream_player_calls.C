@@ -201,43 +201,81 @@ namespace PicoStreamPlayer {
   //   move e1a1 -   "       "    queens side  -+
   //***************************************************************************
 
-  void check_for_castling(std::string possible_castling_move) {
-    if (KingsMove(possible_castling_move.c_str())) {
-      if      (possible_castling_move == "e8g8") MoveChessPiece("h8f8");
-      else if (possible_castling_move == "e8c8") MoveChessPiece("a8d8");
-      else if (possible_castling_move == "e1g1") MoveChessPiece("h1f1");
-      else if (possible_castling_move == "e1c1") MoveChessPiece("a1d1");
-    }
+  void check_for_castling(std::string &move) {
+    // assuming king was piece to be moved...
+    if      (move == "e8g8") MoveChessPiece("h8f8");
+    else if (move == "e8c8") MoveChessPiece("a8d8");
+    else if (move == "e1g1") MoveChessPiece("h1f1");
+    else if (move == "e1c1") MoveChessPiece("a1d1");
+  }
+
+  void check_for_pawn_promotion(std::string &move) {
+    // assuming pawn was piece to be moved...
+    if ( (move[1] == '7') && (move[3] == '8') || (move[1] == '2') && (move[3] == '1') )
+      PromotePawn(move.c_str());
   }
   
+  bool check_for_game_over(std::string &outcome, std::string &possible_mating_move) {
+    bool game_over = false;
+    if (possible_mating_move.find("1-0 {Black mates}") != std::string::npos) {
+	outcome = "Checkmate - Black!";
+	game_over = true;
+    } else if (possible_mating_move.find("0-1 {White mates}") != std::string::npos) {
+      outcome = "Checkmate - White!";
+      game_over = true;
+    } else if (possible_mating_move.find("resign") != std::string::npos) {
+      outcome = "Computer resigns!";
+      game_over = true;
+    } else if (possible_mating_move.find("1/2-1/2 {Draw by repetition}") != std::string::npos) {
+      outcome = "Draw!";
+      game_over = true;
+    }
+    return game_over;
+  }
+
+  std::string outcome; // for now, no way to restart game
+  
   void to_xboard(std::string tbuf) {
+
     if (tbuf.substr(0,7) == "feature") {
       // ignore xboard 'feature' request...
       return;
     }
-    
-    size_t found = tbuf.find("checkmove ");
+
+    size_t found = tbuf.find("\nmove ");
+
+    if (found != std::string::npos) {
+      // update game board with computers move...
+      std::string cpu_move = tbuf.substr(found + 6,4); 
+      bool king_to_move = KingsMove(cpu_move.c_str());
+      bool pawn_to_move = PawnsMove(cpu_move.c_str());
+      MoveChessPiece(cpu_move.c_str());
+      if (king_to_move)
+	check_for_castling(cpu_move);
+      else if (pawn_to_move)
+        check_for_pawn_promotion(cpu_move);	
+      DisplayStatus(("cpu move: " + cpu_move).c_str());
+      if (check_for_game_over(outcome,tbuf))
+        DisplayStatus(outcome.c_str());
+      return;
+    }
+
+    found = tbuf.find("checkmove ");
 
     if (found != std::string::npos) {
       // users move has been validated; update game board...
       std::string users_move = tbuf.substr(found + 10,4);
-      MoveChessPiece(users_move.c_str()); //???
-      check_for_castling(users_move);
+      bool king_to_move = KingsMove(users_move.c_str());
+      bool pawn_to_move = PawnsMove(users_move.c_str());
+      MoveChessPiece(users_move.c_str());
+      if (king_to_move)
+	check_for_castling(users_move);
+      else if (pawn_to_move)
+        check_for_pawn_promotion(users_move);	
       DisplayStatus(("user move: " + users_move).c_str()); 
       return;
     }
     
-    found = tbuf.find("\nmove ");
-    
-    if (found != std::string::npos) {
-      // update game board with computers move...
-      std::string cpu_move = tbuf.substr(found + 6,4); 
-      MoveChessPiece(cpu_move.c_str());
-      check_for_castling(cpu_move);
-      DisplayStatus(("cpu move: " + cpu_move).c_str());
-      return;
-    }
-
     if (tbuf[0] == '#') {
       // just a comment...
       if (tbuf.size() > 18)

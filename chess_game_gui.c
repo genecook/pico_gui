@@ -752,7 +752,7 @@ void DrawChessPiecesNewGame() {
 // does this move involve the king???
 //***********************************************************************
 
-int KingsMove(const char *move) {
+int PieceType(const char *move) {
   char starting_file = move[0];
   char starting_rank = move[1];
 
@@ -762,7 +762,15 @@ int KingsMove(const char *move) {
   NotationToRowColumn(&row,&column,starting_file,starting_rank);
   GetPieceInfo(&piece_type,&piece_color,row,column);
 
-  return (piece_type == KING);
+  return piece_type;
+}
+
+int KingsMove(const char *move) {
+  return (PieceType(move) == KING);
+}
+
+int PawnsMove(const char *move) {
+  return (PieceType(move) == PAWN);
 }
 
 //***********************************************************************
@@ -791,6 +799,28 @@ void MoveChessPiece(const char *move) {
   
   RemovePiece(starting_file,starting_rank);
   PlaceChessPiece(end_file,end_rank,piece_type,piece_color);
+}
+
+void PromotePawn(const char *move) {
+  char file = move[2];
+  char rank = move[3];
+
+  uint8_t piece_type,piece_color;
+
+  int row,column;
+  NotationToRowColumn(&row,&column,file,rank);
+  GetPieceInfo(&piece_type,&piece_color,row,column);
+
+  if (piece_type != PAWN) {
+    // buggy code dude!!!
+    char tbuf[20];
+    sprintf(tbuf,"!!! %s !!!",move);
+    DisplayStatus(tbuf);
+    return;
+  }
+  
+  // ASSUME: pawn always promotes to queen
+  PlaceChessPiece(file,rank,QUEEN,piece_color);
 }
 
 //***********************************************************************

@@ -16,6 +16,8 @@
   int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
   void MoveChessPiece(const char *move);
   int  KingsMove(const char *move);
+  int  PawnsMove(const char *move);
+  void PromotePawn(const char *move);
   void RowColumnToNotation(char *rank,char *file,int row,int column);
   
   void HilightSquare(int row, int column,int push);
