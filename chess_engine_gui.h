@@ -5,6 +5,7 @@
   void Wait(uint time_in_milliseconds);
   void ClearScreen();
   void ReadScreenTouch(int *x, int *y);
+  void NewGame();
   
   void DisplayGameBoard();
   void DisplayStatus(const char *the_status);

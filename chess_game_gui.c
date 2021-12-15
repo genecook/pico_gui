@@ -68,7 +68,7 @@ void DisplayImage(char *fname) {
 }
 
 //***********************************************************************
-// sequence used to initialize LCD/touch panel...
+// sequence used to initialize LCD/touch panel, load game images...
 //***********************************************************************
 
 void GuiStartup() {
@@ -81,6 +81,19 @@ void GuiStartup() {
   InitTouchPanel(lcd_scan_dir); // Initialize touch panel
 
   GUI_Show();
+
+  LoadChessPieceImages();
+}
+
+//***********************************************************************
+// setup a new game...
+//***********************************************************************
+
+void NewGame() {
+  ClearScreen();
+  DisplayGameBoard();
+  DrawChessPiecesNewGame();
+  PlaceOptionsIcons();
 }
 
 //***********************************************************************
@@ -259,8 +272,11 @@ void DisplayGameBoard() {
       board_coords[i][j].lower_right_x = this_square_x + SQUARE_SIZE;
       board_coords[i][j].lower_right_y = this_square_y + SQUARE_SIZE;
       
-      board_coords[i][j].square_color = (square_color == SQUARE_COLOR_DARK) ? DARK : LIGHT;
+      board_coords[i][j].square_color  = (square_color == SQUARE_COLOR_DARK) ? DARK : LIGHT;
 
+      board_coords[i][j].piece_type    = EMPTY;
+      board_coords[i][j].piece_color   = LIGHT;
+    
       // square colors alternate within row...
       square_color = (square_color == SQUARE_COLOR_DARK) ? SQUARE_COLOR_LIGHT : SQUARE_COLOR_DARK;
     }

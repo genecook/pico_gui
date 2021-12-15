@@ -143,8 +143,10 @@ namespace PicoStreamPlayer {
 	                              break;
 				      
         case PROCESSING_NEW_GAME:     // setup new game...
-	                              DisplayStatus("New game? Nunca.");
-	                              move_state = WAITING;
+	                              NewGame();
+	                              token_queue.push("new");
+			              token_queue.push(move_str);
+                                      move_state = WAITING;
 	                              break;
 
         case MOVE_IN_PROGRESS: // waiting 'til move completes or aborts...

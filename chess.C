@@ -18,12 +18,8 @@ namespace PicoStreamPlayer {
 
 int main() {
   GuiStartup();
-  ClearScreen();
-  DisplayGameBoard();
-  LoadChessPieceImages();
-  DrawChessPiecesNewGame();
-  PlaceOptionsIcons();
-
+  NewGame();
+  
   std::cout << "Pico Chess, Alpha version..." << std::endl;
 
   PicoChess::ChessEngine my_little_engine;
