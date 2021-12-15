@@ -25,8 +25,15 @@ void RowColumnToNotation(char *rank,char *file,int row,int column);
 //*****************************************************************************
 
 void ReadScreenTouch(int *x, int *y) {
-  POINT px, py;
-  ReadTouch(&px, &py);
+  POINT px = 260, py = 0;
+
+  // x==260, y == 0 - appears to be reading when 'pen' leaves screen or goes
+  // off edge. Keep trying 'til valid point set read...
+  
+  while( (px == 260) && (py == 0) ) {
+    ReadTouch(&px, &py);
+  }
+  
   *x = px;
   *y = py;
 }
