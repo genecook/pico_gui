@@ -78,15 +78,13 @@ namespace PicoStreamPlayer {
 
   std::queue<std::string> token_queue;
 
-  std::queue<std::string> replay_queue;
-
+  bool replay_queue_empty();
   void undo_last_move();
-
-  void save_for_replay(std::string &next_token) {
-    // with current state of touch, this occurs pretty commonly...
-    if (next_token == "# BBB BAD move") return;
-    replay_queue.push(next_token);    
-  }
+  void save_for_replay(std::string &next_token);
+  void flush_replay_queue();
+  void save_game();
+  void restore_game();
+  
   void get_next_token(std::string &next_token) {
     // process any queued up tokens first...
     
@@ -127,17 +125,20 @@ namespace PicoStreamPlayer {
                                 break;
 				
         case PROCESSING_SAVE_GAME:    // save game to flash...
-	                              DisplayStatus("Save game? Not yet.");
+	                              save_game();
 	                              move_state = WAITING;
 	                              break;
 				      
         case PROCESSING_RESTORE_GAME: // restore previously saved game from flash...
-	                              DisplayStatus("Restore game? Not yet.");
+	                              NewGame();
+				      while(!token_queue.empty()) token_queue.pop();
+                                      flush_replay_queue();
+	                              restore_game();
 	                              move_state = WAITING;
 	                              break;
 				      
         case PROCESSING_PLAY_LEVEL:   // change game engine play level...
-	                              DisplayStatus("Change play level? Nein.");
+	                              token_queue.push("togglelevels");
 	                              move_state = WAITING;
 	                              break;
 				      
@@ -147,7 +148,7 @@ namespace PicoStreamPlayer {
 	                              break;
 				      
         case PROCESSING_UNDO:         // undo last move...
-	                              if (replay_queue.empty()) {
+	                              if (replay_queue_empty()) {
 					// game just started, ie, nothing to undo...
 				        DisplayStatus("Nothing to undo...");
 				        move_state = WAITING;
@@ -159,11 +160,12 @@ namespace PicoStreamPlayer {
 				      undo_last_move();
 	                              move_state = WAITING;
 	                              break;
+
 				      
         case PROCESSING_NEW_GAME:     // setup new game...
 	                              NewGame();
 				      while(!token_queue.empty()) token_queue.pop();
-                                      while(!replay_queue.empty()) replay_queue.pop();
+                                      flush_replay_queue();
 	                              token_queue.push("new");
                                       move_state = WAITING;
 	                              break;
@@ -171,20 +173,23 @@ namespace PicoStreamPlayer {
         case MOVE_IN_PROGRESS: // waiting 'til move completes or aborts...
 	                       next_selection = get_next_selection(&end_row,&end_column);
 			       switch(next_selection) {
-			         case NO_SELECTION:    // waiting on dest square selection to complete move...
-			                               break;
-			         case SQUARE_SELECTED: // make sure we have a new square selected...
-				                       if ( (end_row==start_row) && (end_column==start_column) )
-							 break;
-						       else
-			                                 move_state = PROCESSING_MOVE;
-			                               break;
-			         default:              // selection made that is NOT dest square? fine,
-				                       // clear state and continue...
-				                       DisplayStatus("Move aborted.");      
-                                                       DeHiLiteSquare(-1,-1,1);    
-				                       move_state = WAITING;
-	                                               break;
+			         case NO_SELECTION:
+				   // waiting on dest square selection to complete move...
+			           break;
+			         case SQUARE_SELECTED:
+				   // make sure we have a new square selected...
+				   if ( (end_row==start_row) && (end_column==start_column) )
+				     break;
+				   else
+			             move_state = PROCESSING_MOVE;
+			           break;
+			         default:
+				   // selection made that is NOT dest square? fine,
+				   // clear state and continue...
+				   DisplayStatus("Move aborted.");      
+                                   DeHiLiteSquare(-1,-1,1);    
+				   move_state = WAITING;
+	                           break;
 			       }
 			       break;
 				
@@ -201,8 +206,67 @@ namespace PicoStreamPlayer {
   }
 
   //***************************************************************************
-  // undo last move - replay entire game up to but not including last move...
+  // replay/undo/save/restore all done via replay-queue...
   //*************************************************************************** 
+
+  std::deque<std::string> replay_queue;
+
+  void flush_replay_queue() {
+     while(!replay_queue.empty()) replay_queue.pop_front();
+  }
+
+  bool replay_queue_empty() {
+    return replay_queue.empty();
+  }
+
+  void save_game() {
+    DisplayStatus("Saving game...");
+
+    if (replay_queue.size() == 0) {
+      DisplayStatus("No moves to save.");
+      return;
+    }
+    
+    if (open_game_file(FOR_WRITE) != 0) {
+      DisplayStatus("Can't open game file?");
+      return;
+    }
+
+    for (auto it = replay_queue.begin(); it != replay_queue.end(); it++) {
+      if (write_to_game_file((*it).c_str()) != 0) {
+        DisplayStatus("Bad game file write?");
+        return;
+      }	
+    }
+
+    close_game_file();
+
+    DisplayStatus("Game has been saved.");
+  }
+
+  void restore_game() {
+    DisplayStatus("Reloading saved game...");
+
+    open_game_file(FOR_READ);
+
+    char tbuf[FILE_RECORD_SIZE];
+
+    while(read_from_game_file(tbuf) == 0) {
+      token_queue.push(tbuf);
+    }
+
+    close_game_file();
+    
+    DisplayStatus("Game state restored.");
+  }
+  
+  void save_for_replay(std::string &next_token) {
+    // with current state of touch, this occurs pretty commonly...
+    if (next_token == "# Invalid move") return;
+    replay_queue.push_back(next_token);    
+  }
+  
+  // undo last move - replay entire game up to but not including last move...
 
   void undo_last_move() {
     // flush token queue...
@@ -211,7 +275,7 @@ namespace PicoStreamPlayer {
     // copy/remove all replay queue elements to token queue, up to last element...
     while(!replay_queue.empty()) {
       std::string replay_element = replay_queue.front();
-      replay_queue.pop();
+      replay_queue.pop_front();
       if (replay_queue.empty()) {
 	// skip last move...
       } else if ( (replay_queue.size() == 1) && (replay_element == "checkmove") ) {
@@ -226,18 +290,16 @@ namespace PicoStreamPlayer {
   // update gui from chess engine...
   //
   // comments start with '#' - ignore
-  // access comments with prefix '# BBB"
   // "move" + engine_move
   //
-  // what we expect from xboard:
+  // what we expect from engine:
   //   # BBB xboard
-  //   feature usermove=1 debug=1 sigint=0 sigterm=0 done=1
   //   # BBB OK move
-  //   checkmove e2e4
-  //   # BBB usermove e2e4
-  //   # BBB engine to make move...
+  //   # checkmove e2e4
+  //   # usermove e2e4
+  //   # Engine moves...
   //   # BBB engine move made: # of levels: 3, number of moves evaluated: 20435\nmove g8f6
-  //   # BBB BAD move
+  //   # Invalid move
   //   move e8g8 - castle, black, kings side   -+
   //   move e8a8 -   "       "    queens side   +- in all cases, gui needs to recognize
   //   move e1g1 -   "     white  kings side    |   castling and update rooks position

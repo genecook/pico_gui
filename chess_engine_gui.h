@@ -13,7 +13,15 @@
   
   int  LoadChessPieceImages();
   void DrawChessPiecesNewGame();
-  
+
+  enum { FOR_READ, FOR_WRITE };
+#define FILE_RECORD_SIZE 128
+
+  int  open_game_file(int for_write);
+  int  close_game_file();
+  int  write_to_game_file(const char *tbuf);
+  int  read_from_game_file(char *tbuf);
+
   int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
   void MoveChessPiece(const char *move);
   int  KingsMove(const char *move);

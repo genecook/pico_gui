@@ -429,6 +429,36 @@ void my_LCD_Show_bmp(char *fname) {
 
 //#define DEBUG 1
 
+//***********************************************************************
+//***********************************************************************
+
+FIL game_file; 
+
+int open_game_file(int for_write) {
+  FRESULT fr = f_open(&game_file, "game.txt", (for_write ? FA_WRITE : FA_READ) );
+  if (fr != FR_OK)
+    return -1;
+  return 0;
+}
+
+int close_game_file() {
+  if (f_close(&game_file) != FR_OK)
+    return -1;
+  return 0;
+}
+
+int write_to_game_file(const char *tbuf) {
+  if (f_puts (tbuf, &game_file) != FR_OK)
+    return -1;
+  return 0;
+}
+
+int read_from_game_file(char *tbuf) {
+  if (f_gets(tbuf, FILE_RECORD_SIZE, &game_file) == NULL)
+    return -1;
+  return 0;
+}
+
 static uint8_t tbuf[1024]; 
 
 int ReadChessPieceBMP(uint16_t image_buffer[NUM_PIXEL_ROWS][PIXELS_PER_ROW], const char *bmp_file) {
