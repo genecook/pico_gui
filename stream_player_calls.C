@@ -78,13 +78,22 @@ namespace PicoStreamPlayer {
 
   std::queue<std::string> token_queue;
 
+  std::queue<std::string> replay_queue;
 
+  void undo_last_move();
+
+  void save_for_replay(std::string &next_token) {
+    // with current state of touch, this occurs pretty commonly...
+    if (next_token == "# BBB BAD move") return;
+    replay_queue.push(next_token);    
+  }
   void get_next_token(std::string &next_token) {
     // process any queued up tokens first...
     
     if (!token_queue.empty()) {
       next_token = token_queue.front();
       token_queue.pop();
+      save_for_replay(next_token);
       return;
     }
 
@@ -138,14 +147,24 @@ namespace PicoStreamPlayer {
 	                              break;
 				      
         case PROCESSING_UNDO:         // undo last move...
-	                              DisplayStatus("Undo last move? Nada.");
+	                              if (replay_queue.empty()) {
+					// game just started, ie, nothing to undo...
+				        DisplayStatus("Nothing to undo...");
+				        move_state = WAITING;
+	                                break;
+				      }
+				      DisplayStatus("Undo last move...");
+				      // flush token queue...
+				      NewGame();
+				      undo_last_move();
 	                              move_state = WAITING;
 	                              break;
 				      
         case PROCESSING_NEW_GAME:     // setup new game...
 	                              NewGame();
+				      while(!token_queue.empty()) token_queue.pop();
+                                      while(!replay_queue.empty()) replay_queue.pop();
 	                              token_queue.push("new");
-			              token_queue.push(move_str);
                                       move_state = WAITING;
 	                              break;
 
@@ -177,6 +196,28 @@ namespace PicoStreamPlayer {
 			      break;
 
         default: break;
+      }
+    }
+  }
+
+  //***************************************************************************
+  // undo last move - replay entire game up to but not including last move...
+  //*************************************************************************** 
+
+  void undo_last_move() {
+    // flush token queue...
+    while(!token_queue.empty()) token_queue.pop();
+    token_queue.push("new");
+    // copy/remove all replay queue elements to token queue, up to last element...
+    while(!replay_queue.empty()) {
+      std::string replay_element = replay_queue.front();
+      replay_queue.pop();
+      if (replay_queue.empty()) {
+	// skip last move...
+      } else if ( (replay_queue.size() == 1) && (replay_element == "checkmove") ) {
+	// skip user move 'start' token...
+      } else {
+	token_queue.push(replay_element);
       }
     }
   }
