@@ -141,6 +141,8 @@ namespace PicoStreamPlayer {
 				      
         case PROCESSING_CHANGE_SIDES: // change sides...
 	                              DisplayStatus("Change sides? Nyet.");
+	                              token_queue.push("changesides");
+	                              token_queue.push("go");
 	                              move_state = WAITING;
 	                              break;
 				      
