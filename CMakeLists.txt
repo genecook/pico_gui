@@ -76,8 +76,8 @@ include_directories(${PICO_CHESS}/include)
 
 include_directories(${PICO_CHESS_GUI})
 
-add_executable(pico_chess chess.C chess_game_gui.c stream_player_calls.C
-               my_fatfs_storage.c my_track_touch.c
+add_executable(pico_chess chess.C stream_player_calls.C chess_game_gui.C 
+               lcd_touch_wrapper.c my_fatfs_storage.c my_track_touch.c
                ${PICO_CHESS}/src/pico_stream_player.C
                ${PICO_CHESS}/src/board.C ${PICO_CHESS}/src/move.C ${PICO_CHESS}/src/pieces.C
                ${PICO_CHESS}/src/bishop.C ${PICO_CHESS}/src/king.C ${PICO_CHESS}/src/knight.C

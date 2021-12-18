@@ -5,10 +5,7 @@
 #include "pico/stdlib.h"
 
 #include <chess.h>
-
-extern "C" {
 #include <chess_engine_gui.h>
-}
 
 //*****************************************************************************
 // supply 'pico-chess' stream player get_next_token, to_xboard functions...
@@ -227,19 +224,19 @@ namespace PicoStreamPlayer {
       return;
     }
     
-    if (open_game_file(FOR_WRITE) != 0) {
+    if (OpenGameFile(FOR_WRITE) != 0) {
       DisplayStatus("Can't open game file?");
       return;
     }
 
     for (auto it = replay_queue.begin(); it != replay_queue.end(); it++) {
-      if (write_to_game_file((*it).c_str()) != 0) {
+      if (WriteToGameFile((*it).c_str()) != 0) {
         DisplayStatus("Bad game file write?");
         return;
       }	
     }
 
-    close_game_file();
+    CloseGameFile();
 
     DisplayStatus("Game has been saved.");
   }
@@ -247,15 +244,15 @@ namespace PicoStreamPlayer {
   void restore_game() {
     DisplayStatus("Reloading saved game...");
 
-    open_game_file(FOR_READ);
+    OpenGameFile(FOR_READ);
 
-    char tbuf[FILE_RECORD_SIZE];
+    char tbuf[ FileRecordSize() ];
 
-    while(read_from_game_file(tbuf) == 0) {
+    while(ReadFromGameFile(tbuf) == 0) {
       token_queue.push(tbuf);
     }
 
-    close_game_file();
+    CloseGameFile();
     
     DisplayStatus("Game state restored.");
   }

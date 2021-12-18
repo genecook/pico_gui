@@ -4,13 +4,7 @@
 #include "pico/stdlib.h"
 
 #include <chess.h>
-
-// the 'chess engine gui' is, at least for now,
-// written in C...
-
-extern "C" {
 #include <chess_engine_gui.h>
-}
 
 namespace PicoStreamPlayer {
   int Play(PicoChess::ChessEngine *the_engine);
