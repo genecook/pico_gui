@@ -143,6 +143,7 @@ namespace PicoStreamPlayer {
 	                              DisplayStatus("Change sides? Nyet.");
 	                              token_queue.push("changesides");
 	                              token_queue.push("go");
+				      token_queue.push("showside");
 	                              move_state = WAITING;
 	                              break;
 				      
@@ -379,7 +380,21 @@ namespace PicoStreamPlayer {
       DisplayStatus(("user move: " + users_move).c_str()); 
       return;
     }
+
+    found = tbuf.find("useriswhite");
     
+    if (found != std::string::npos) {
+      DisplayStatus("User plays white."); 
+      return;
+    }
+
+    found = tbuf.find("userisblack");
+    
+    if (found != std::string::npos) {
+      DisplayStatus("User plays black."); 
+      return;
+    }
+
     if (tbuf[0] == '#') {
       // just a comment...
       if (tbuf.size() > 18)
