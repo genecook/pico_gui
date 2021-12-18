@@ -13,8 +13,8 @@ track_touch.c - track pad example. Most of the vendor supplied track
   panel functions are private (declared static in LCD_Touch.c) and
   thus out of necessity copied and/or modified for this example.
 
-chess.c, banner.c - proof of concept. Link in pico_chess c++ based chess
-  engine, along with (c) code to display chessboard.
+chess.C - Link in pico_chess c++ based chess
+  engine, along with lcd/touch chessboard gui.
   
   
   
