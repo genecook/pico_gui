@@ -6,6 +6,7 @@
 #include "ff.h"
 #include "fatfs_storage.h"
 
+#include <string.h>
 #include <lcd_touch_wrapper.h>
 
 // locally defined touch support code:
@@ -155,7 +156,7 @@ void my_LCD_Show_bmp(char *fname) {
 FIL game_file; 
 
 int open_game_file(int for_write) {
-  FRESULT fr = f_open(&game_file, "game.txt", (for_write ? FA_WRITE : FA_READ) );
+  FRESULT fr = f_open(&game_file, "game.txt", (for_write ? (FA_WRITE | FA_CREATE_ALWAYS) : FA_READ) );
   if (fr != FR_OK)
     return -1;
   return 0;
@@ -168,7 +169,9 @@ int close_game_file() {
 }
 
 int write_to_game_file(const char *tbuf) {
-  if (f_puts (tbuf, &game_file) != FR_OK)
+  if (f_puts(tbuf, &game_file) == EOF)
+    return -1;
+  if (f_putc('\n',&game_file) == EOF) // newline is record separator
     return -1;
   return 0;
 }
@@ -178,8 +181,10 @@ int write_to_game_file(const char *tbuf) {
 int file_record_size() { return FILE_RECORD_SIZE; };
 
 int read_from_game_file(char *tbuf) {
-  if (f_gets(tbuf, FILE_RECORD_SIZE, &game_file) == NULL)
+  if (f_gets(tbuf, FILE_RECORD_SIZE, &game_file) != tbuf)
     return -1;
+  if (strlen(tbuf) > 0)
+    tbuf[strlen(tbuf) - 1] = '\0'; // strip newline record separator
   return 0;
 }
 
