@@ -20,7 +20,7 @@ set(PICO_CHESS_GUI $ENV{HOME}/Desktop/pico_gui)
 
 project(my_gui C CXX ASM)
 
-set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -44,7 +44,7 @@ include_directories(${PICO_LCD_LIB}/lib/sdcard)
 
 
 # build line_sweeps executable...
-
+# ---------------------------------
 add_executable(line_sweeps line_sweeps.c)
 # enable usb output, disable uart output
 pico_enable_stdio_usb(line_sweeps 0)
@@ -55,7 +55,7 @@ target_link_libraries(line_sweeps examples lcd font config pico_stdlib hardware_
 
 
 # build track_touch executable...
-
+# --------------------------------
 add_executable(track_touch track_touch.c my_track_touch.c)
 
 target_link_libraries(track_touch examples lcd font config pico_stdlib hardware_spi fatfs)
@@ -68,7 +68,7 @@ pico_add_extra_outputs(track_touch)
 
 
 # build pico_chess executable...
-
+# --------------------------------
 add_subdirectory(${PICO_CHESS}/include pico_chess/include)
 add_subdirectory(${PICO_CHESS}/src pico_chess/src)
 
@@ -86,7 +86,7 @@ add_executable(pico_chess chess.C stream_player_calls.C chess_game_gui.C
 	       ${PICO_CHESS}/src/eval_move.C ${PICO_CHESS}/src/engine.C
                )
 
-target_link_libraries(pico_chess examples lcd font config pico_stdlib hardware_spi fatfs)
+target_link_libraries(pico_chess lcd font config pico_stdlib hardware_spi fatfs)
 
 # enable uart output, disable usb output
 pico_enable_stdio_usb(pico_chess 0)
