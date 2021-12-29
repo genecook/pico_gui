@@ -103,6 +103,7 @@ namespace PicoStreamPlayer {
       switch(move_state) {
         case STARTUP:           // inform engine that "xboard" is connected...
 	                        token_queue.push("xboard");
+				token_queue.push("placepieces");
 	                        move_state = WAITING;
 	                        break;
 			     
@@ -167,38 +168,39 @@ namespace PicoStreamPlayer {
 				      while(!token_queue.empty()) token_queue.pop();
                                       flush_replay_queue();
 	                              token_queue.push("new");
+				      token_queue.push("placepieces");
                                       move_state = WAITING;
 	                              break;
 
-        case MOVE_IN_PROGRESS: // waiting 'til move completes or aborts...
-	                       next_selection = get_next_selection(&end_row,&end_column);
-			       switch(next_selection) {
-			         case NO_SELECTION:
-				   // waiting on dest square selection to complete move...
-			           break;
-			         case SQUARE_SELECTED:
-				   // make sure we have a new square selected...
-				   if ( (end_row==start_row) && (end_column==start_column) )
-				     break;
-				   else
-			             move_state = PROCESSING_MOVE;
-			           break;
-			         default:
-				   // selection made that is NOT dest square? fine,
-				   // clear state and continue...
-				   DisplayStatus("Move aborted.");      
-                                   DeHiLiteSquare(-1,-1,1);    
-				   move_state = WAITING;
-	                           break;
-			       }
-			       break;
+        case MOVE_IN_PROGRESS:        // waiting 'til move completes or aborts...
+	                              next_selection = get_next_selection(&end_row,&end_column);
+			              switch(next_selection) {
+			                case NO_SELECTION:
+				          // waiting on dest square selection to complete move...
+			                  break;
+			              case SQUARE_SELECTED:
+				          // make sure we have a new square selected...
+				          if ( (end_row==start_row) && (end_column==start_column) )
+				            break;
+				          else
+			                    move_state = PROCESSING_MOVE;
+			                  break;
+			              default:
+				          // selection made that is NOT dest square? fine,
+				          // clear state and continue...
+				          DisplayStatus("Move aborted.");      
+                                          DeHiLiteSquare(-1,-1,1);    
+				          move_state = WAITING;
+	                                  break;
+			              }
+			              break;
 				
-        case PROCESSING_MOVE: // queue up next move. engine to validate same and update game board...
-                              encode_echo_move(move_str,start_row,start_column,end_row,end_column);
-                              token_queue.push("checkmove");
-			      token_queue.push(move_str);
-                              move_state = WAITING;
-			      break;
+        case PROCESSING_MOVE:         // queue up next move. engine to validate same and update game board...
+                                      encode_echo_move(move_str,start_row,start_column,end_row,end_column);
+                                      token_queue.push("checkmove");
+			              token_queue.push(move_str);
+                                      move_state = WAITING;
+			              break;
 
         default: break;
       }
@@ -392,6 +394,14 @@ namespace PicoStreamPlayer {
     
     if (found != std::string::npos) {
       DisplayStatus("User plays black."); 
+      return;
+    }
+
+    found = tbuf.find("placepiece ");
+    
+    if (found != std::string::npos) {
+      std::string piece_to_place = tbuf.substr(found + 11,4); 
+      PlaceChessPieceCmd(piece_to_place.c_str());
       return;
     }
 

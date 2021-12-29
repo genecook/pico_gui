@@ -24,6 +24,7 @@
 
   int  SquareSelected(int *row, int *column, int touch_x, int touch_y);
   void MoveChessPiece(const char *move);
+  void PlaceChessPieceCmd(const char *move);
   int  KingsMove(const char *move);
   int  PawnsMove(const char *move);
   void PromotePawn(const char *move);

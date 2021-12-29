@@ -44,7 +44,7 @@ void ClearScreen() {
 void NewGame() {
   ClearScreen();
   DisplayGameBoard();
-  DrawChessPiecesNewGame();
+  //DrawChessPiecesNewGame();
   PlaceOptionsIcons();
 }
 
@@ -617,6 +617,26 @@ void MoveChessPiece(const char *move) {
   
   RemovePiece(starting_file,starting_rank);
   PlaceChessPiece(end_file,end_rank,piece_type,piece_color);
+}
+
+// this function called to place pieces at start of game:
+void PlaceChessPieceCmd(const char *move) {
+  int piece_color = (move[0] == 'W') || (move[0] == 'w') ? LIGHT : DARK;
+  int piece_type;
+  switch(move[1]) {
+    case 'p': case 'P': piece_type = PAWN;   break;
+    case 'r': case 'R': piece_type = ROOK;   break;
+    case 'n': case 'N': piece_type = KNIGHT; break;
+    case 'b': case 'B': piece_type = BISHOP; break;
+    case 'q': case 'Q': piece_type = QUEEN;  break;
+    case 'k': case 'K': piece_type = KING;   break;
+    default: break;
+  }
+  char file = move[2];
+  char rank = move[3];
+  int row,column;
+  NotationToRowColumn(&row,&column,file,rank);
+  PlaceChessPiece(file,rank,piece_type,piece_color);
 }
 
 void PromotePawn(const char *move) {
