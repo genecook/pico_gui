@@ -20,7 +20,8 @@ set(PICO_CHESS_GUI $ENV{HOME}/Desktop/pico_gui)
 
 project(my_gui C CXX ASM)
 
-#set(CMAKE_BUILD_TYPE Debug)
+# use Debug or Release:
+set(CMAKE_BUILD_TYPE Release)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
