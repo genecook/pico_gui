@@ -141,7 +141,6 @@ namespace PicoStreamPlayer {
 	                              break;
 				      
         case PROCESSING_CHANGE_SIDES: // change sides...
-	                              DisplayStatus("Change sides? Nyet.");
 	                              token_queue.push("changesides");
 	                              token_queue.push("go");
 				      token_queue.push("showside");
@@ -243,11 +242,11 @@ namespace PicoStreamPlayer {
 
     CloseGameFile();
 
-    DisplayStatus("Game has been saved.");
+    DisplayStatus("Game saved.");
   }
 
   void restore_game() {
-    DisplayStatus("Reloading saved game...");
+    DisplayStatus("Reloading game...");
 
     OpenGameFile(FOR_READ);
 
@@ -259,7 +258,7 @@ namespace PicoStreamPlayer {
 
     CloseGameFile();
     
-    DisplayStatus("Game state restored.");
+    DisplayStatus("Game restored.");
   }
   
   void save_for_replay(std::string &next_token) {
@@ -402,6 +401,26 @@ namespace PicoStreamPlayer {
     if (found != std::string::npos) {
       std::string piece_to_place = tbuf.substr(found + 11,4); 
       PlaceChessPieceCmd(piece_to_place.c_str());
+      return;
+    }
+
+    if (tbuf == "# Play level: advanced") {
+      DisplayStatus("# Play level: 5"); 
+      return;
+    }
+    
+    if (tbuf == "# Play level: standard") {
+      DisplayStatus("# Play level: 3"); 
+      return;
+    }
+    
+    if (tbuf == "# new") {
+      DisplayStatus("# New game..."); 
+      return;
+    }
+    
+    if (found != std::string::npos) {
+      DisplayStatus("User plays black."); 
       return;
     }
 
