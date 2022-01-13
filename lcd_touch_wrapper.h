@@ -8,7 +8,7 @@ void draw_rectangle(uint16_t x, uint16_t y, uint16_t extent_x, uint16_t extent_y
 		    uint16_t color, uint16_t do_fill);
 enum { COLOR_WHITE=0, COLOR_BLACK=1, COLOR_RED=2 }; 
 enum { FONT_SIZE_12=12, FONT_SIZE_16=16 };
-void display_string(uint16_t x, uint16_t y, char *tbuf, uint16_t font_size,
+void display_string(uint16_t x, uint16_t y, const char *tbuf, uint16_t font_size,
 		    uint16_t background_color, uint16_t foreground_color);
 #define FILE_RECORD_SIZE 128
 int open_game_file(int for_write);
