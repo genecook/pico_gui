@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pico/stdlib.h>
 #include <string.h>
+#include <stdexcept>
 
 #include <chess_engine_gui.h>
 
@@ -178,7 +179,13 @@ void DisplayStatus(const char *the_status) {
   display_string(STATUS_TEXT_X, STATUS_TEXT_Y, "                    ",
 		 FONT_SIZE_16, COLOR_BLACK, COLOR_WHITE);
   char tbuf[20];
-  sprintf(tbuf,"> %s",the_status);
+  strcpy(tbuf,"> ");
+  if (strlen(the_status) > 17)
+    strncat(tbuf,the_status,17);
+  else
+    strcat(tbuf,the_status);
+
+  //sprintf(tbuf,"> %s",the_status);
   display_string(STATUS_TEXT_X, STATUS_TEXT_Y, tbuf,
 		 FONT_SIZE_16, COLOR_BLACK, COLOR_WHITE);
 }
@@ -691,7 +698,7 @@ void PromotePawn(const char *move) {
 #define BUTTON_TEXT_OFFSET_X 5
 #define BUTTON_TEXT_OFFSET_Y 5
 
-void DrawButton(uint16_t origin_x, uint16_t origin_y, char *button_text, int do_hilite) {
+void DrawButton(uint16_t origin_x, uint16_t origin_y, const char *button_text, int do_hilite) {
   uint16_t fill_option = do_hilite ? DO_FILL : NO_FILL;
 
   // 'erase', ie, write over previous button in case it had previously been hilited...
@@ -718,8 +725,8 @@ void DrawButton(uint16_t origin_x, uint16_t origin_y, char *button_text, int do_
 struct push_button {
   uint16_t  x;
   uint16_t  y;
-  char     *button_text;
-  char     *help_text;
+  const char     *button_text;
+  const char     *help_text;
 };
 
 struct push_button options[] = {
@@ -815,17 +822,17 @@ int ConfirmOption(int option_index) {
   int option_confirmed = 0;
 
   // wait 'til some touch event...
-  
-  int sx,sy;
-  ReadScreenTouch(&sx, &sy);
+  int x = -1, y = -1;
+  ReadScreenTouch(&x, &y);
 
-  int x = sx,y = sy;
+  // make 'accept' box larger than 'click' box, just to make it easier to 
+  //  confirm selection...
+  uint16_t accept_ulx = click_box_ulx - 10;
+  uint16_t accept_uly = click_box_uly - 10;
+  uint16_t accept_lrx = click_box_lrx + 10;
+  uint16_t accept_lry = click_box_lry + 10;
 
-  while( (x == sx) && (y == sy) ) {
-    ReadScreenTouch(&x, &y);
-  }
-  
-  if ( (x >= click_box_ulx) && (x < click_box_lrx) && (y >= click_box_uly) && (y < click_box_lry) )
+  if ( (x >= accept_ulx) && (x < accept_lrx) && (y >= accept_uly) && (y < accept_lry) )
     option_confirmed = 1;
   
   // again, erase section in middle of display...
