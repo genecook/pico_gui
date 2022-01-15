@@ -119,6 +119,14 @@ void display_string(uint16_t x, uint16_t y, const char *tbuf, uint16_t font_size
 		   true_color(background_color), true_color(foreground_color));
 }
 
+void display_char(uint16_t x, uint16_t y, const char tc, uint16_t font_size,
+		  uint16_t background_color, uint16_t foreground_color) {
+  sFONT* TP_Font = which_font(font_size);
+
+  GUI_DisChar(x,y,tc,TP_Font,
+	      true_color(background_color), true_color(foreground_color));
+}
+
 // lifted from vendor LCD/flash-access code. Modified so as to display
 // only a single BMP-formated image, read from flash...
 

@@ -6,9 +6,13 @@
   void ClearScreen();
   void ReadScreenTouch(int *x, int *y);
   void NewGame();
-  
+
+  void StartProgressBar();
+  void CancelProgressBar();
+
   void DisplayGameBoard();
   void DisplayStatus(const char *the_status);
+  void DisplayStatusChar(const char status_char, int offset);
   void DisplayToOptions(const char *the_status);
   
   int  LoadChessPieceImages();

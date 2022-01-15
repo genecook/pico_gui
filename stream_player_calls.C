@@ -139,7 +139,7 @@ namespace PicoStreamPlayer {
 	                              token_queue.push("togglelevels");
 	                              move_state = WAITING;
 	                              break;
-				      
+
         case PROCESSING_CHANGE_SIDES: // change sides...
 	                              token_queue.push("changesides");
 	                              token_queue.push("go");
@@ -416,6 +416,18 @@ namespace PicoStreamPlayer {
     
     if (tbuf == "# new") {
       DisplayStatus("# New game..."); 
+      return;
+    }
+    
+    if (tbuf == "# start progress bar") {
+      // engine knows when some operation will take time...
+      StartProgressBar();
+      return;
+    }
+    
+    if (tbuf == "# cancel progress bar") {
+      // engine halts progress bar after some long running operation...
+      CancelProgressBar();
       return;
     }
     

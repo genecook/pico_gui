@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <pico/stdlib.h>
+#include <pico/multicore.h>
+#include <pico/time.h>
+
 #include <string.h>
 #include <stdexcept>
 
@@ -9,6 +12,78 @@
 
 extern "C" {
 #include <lcd_touch_wrapper.h>
+#include <pico/util/queue.h>
+}
+
+//***********************************************************************
+// use 2nd core for screen saver, progress bar display...
+//***********************************************************************
+
+#define FLAG_VALUE 123
+
+// for now, use characters to show timer 'tics'...
+
+static char progress_bar_tics[] = { '|', '/', '-', '\\', '|', '/', '-', '\0' };
+static int  tic_index = -1;
+
+// timer 'tic' interval in milliseconds:
+
+#define SLEEP_INTERVAL 125
+
+enum { START_PROGRESS_BAR = 10, STOP_PROGRESS_BAR = 11,
+       START_SCREEN_SAVER_COUNTDOWN = 12, RESET_SCREEN_SAVER_COUNT = 13
+     };
+
+// screen saver not implemented just yet...
+
+queue_t core1_cmd_queue;
+
+void core1_entry() {
+  // let the other core know we're alive...
+  multicore_fifo_push_blocking(FLAG_VALUE);
+  
+  while(1) {
+    sleep_ms(SLEEP_INTERVAL);
+
+    if ( queue_is_empty(&core1_cmd_queue) ) {
+      // no new command...
+    } else {
+      // display progress bar or perhaps start screen saver?...
+      uint32_t g;
+      queue_remove_blocking(&core1_cmd_queue,&g);
+      switch((int) g) {
+        case START_PROGRESS_BAR: tic_index = 0;
+                                 DisplayStatus("Working ");
+	                         break;
+        case STOP_PROGRESS_BAR:  tic_index = -1;
+                                 // let the other core know we're done...
+                                 multicore_fifo_push_blocking(FLAG_VALUE);
+	                         break;
+        case START_SCREEN_SAVER_COUNTDOWN: break;
+        case RESET_SCREEN_SAVER_COUNT: break;
+        default: break;
+      }
+    }
+    
+    if (tic_index != -1) {
+      // update 'progress bar'...
+      DisplayStatusChar(progress_bar_tics[tic_index],10);
+      if (progress_bar_tics[++tic_index] == '\0')
+	tic_index = 0;
+    }
+  }
+}
+
+void StartProgressBar() {  
+  uint32_t g = START_PROGRESS_BAR;
+  queue_try_add(&core1_cmd_queue,&g);
+}
+
+void CancelProgressBar() {
+  uint32_t g = STOP_PROGRESS_BAR;
+  queue_try_add(&core1_cmd_queue,&g);
+  // wait for other core...
+  g = multicore_fifo_pop_blocking();
 }
 
 //***********************************************************************
@@ -28,6 +103,11 @@ void DisplayImage(char *fname) {
 void GuiStartup() {
   lcd_touch_startup();
   LoadChessPieceImages();
+  queue_init_with_spinlock(&core1_cmd_queue,sizeof(uint32_t),2,1);
+  // startup 2nd core, wait for it...
+  multicore_launch_core1(core1_entry);
+  uint32_t g = multicore_fifo_pop_blocking();
+  // will ASSUME 2nd core is good to go...
 }
 
 void Wait(uint time_in_milliseconds) {
@@ -185,9 +265,15 @@ void DisplayStatus(const char *the_status) {
   else
     strcat(tbuf,the_status);
 
-  //sprintf(tbuf,"> %s",the_status);
   display_string(STATUS_TEXT_X, STATUS_TEXT_Y, tbuf,
 		 FONT_SIZE_16, COLOR_BLACK, COLOR_WHITE);
+}
+
+#define FONT_SIZE_16_WIDTH 11
+
+void DisplayStatusChar(const char status_char, int offset) {
+  display_char(STATUS_TEXT_X + (offset * FONT_SIZE_16_WIDTH), STATUS_TEXT_Y, status_char,
+	       FONT_SIZE_16, COLOR_BLACK, COLOR_WHITE);  
 }
 
 //***********************************************************************

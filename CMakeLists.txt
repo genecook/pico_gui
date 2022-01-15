@@ -89,7 +89,7 @@ add_executable(pico_chess chess.C stream_player_calls.C chess_game_gui.C
 	       ${PICO_CHESS}/src/eval_move.C ${PICO_CHESS}/src/engine.C
                )
 
-target_link_libraries(pico_chess lcd font config pico_stdlib hardware_spi fatfs)
+target_link_libraries(pico_chess lcd font config pico_stdlib pico_multicore hardware_spi fatfs)
 
 # enable uart output, disable usb output
 pico_enable_stdio_usb(pico_chess 0)

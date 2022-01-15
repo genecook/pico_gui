@@ -10,6 +10,8 @@ enum { COLOR_WHITE=0, COLOR_BLACK=1, COLOR_RED=2 };
 enum { FONT_SIZE_12=12, FONT_SIZE_16=16 };
 void display_string(uint16_t x, uint16_t y, const char *tbuf, uint16_t font_size,
 		    uint16_t background_color, uint16_t foreground_color);
+void display_char(uint16_t x, uint16_t y, const char tc, uint16_t font_size,
+		  uint16_t background_color, uint16_t foreground_color);
 #define FILE_RECORD_SIZE 128
 int open_game_file(int for_write);
 int close_game_file();
