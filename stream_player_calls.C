@@ -7,6 +7,8 @@
 #include <chess.h>
 #include <chess_engine_gui.h>
 
+#define REPLAY_WAIT_INTERVAL 125
+
 //*****************************************************************************
 // supply 'pico-chess' stream player get_next_token, to_xboard functions...
 //*****************************************************************************
@@ -75,16 +77,21 @@ namespace PicoStreamPlayer {
 
   std::queue<std::string> token_queue;
 
+  void flush_token_queue() {
+    while(!token_queue.empty())
+      token_queue.pop();
+  }
+  
   bool replay_queue_empty();
   void undo_last_move();
-  void save_for_replay(std::string &next_token);
+  void save_for_replay(std::string next_token);
   void flush_replay_queue();
   void save_game();
   void restore_game();
   
   void get_next_token(std::string &next_token) {
     // process any queued up tokens first...
-    
+
     if (!token_queue.empty()) {
       next_token = token_queue.front();
       token_queue.pop();
@@ -101,7 +108,7 @@ namespace PicoStreamPlayer {
     
     while(token_queue.empty()) { 
       switch(move_state) {
-        case STARTUP:           // inform engine that "xboard" is connected...
+        case STARTUP:           // inform engine that "xboard" is connected, request board setup...
 	                        token_queue.push("xboard");
 				token_queue.push("placepieces");
 	                        move_state = WAITING;
@@ -129,7 +136,7 @@ namespace PicoStreamPlayer {
 				      
         case PROCESSING_RESTORE_GAME: // restore previously saved game from flash...
 	                              NewGame();
-				      while(!token_queue.empty()) token_queue.pop();
+				      flush_token_queue();
                                       flush_replay_queue();
 	                              restore_game();
 	                              move_state = WAITING;
@@ -155,7 +162,6 @@ namespace PicoStreamPlayer {
 	                                break;
 				      }
 				      DisplayStatus("Undo last move...");
-				      // flush token queue...
 				      NewGame();
 				      undo_last_move();
 	                              move_state = WAITING;
@@ -164,7 +170,7 @@ namespace PicoStreamPlayer {
 				      
         case PROCESSING_NEW_GAME:     // setup new game...
 	                              NewGame();
-				      while(!token_queue.empty()) token_queue.pop();
+				      flush_token_queue();
                                       flush_replay_queue();
 	                              token_queue.push("new");
 				      token_queue.push("placepieces");
@@ -177,14 +183,14 @@ namespace PicoStreamPlayer {
 			                case NO_SELECTION:
 				          // waiting on dest square selection to complete move...
 			                  break;
-			              case SQUARE_SELECTED:
+			                case SQUARE_SELECTED:
 				          // make sure we have a new square selected...
 				          if ( (end_row==start_row) && (end_column==start_column) )
 				            break;
 				          else
 			                    move_state = PROCESSING_MOVE;
 			                  break;
-			              default:
+			                default:
 				          // selection made that is NOT dest square? fine,
 				          // clear state and continue...
 				          DisplayStatus("Move aborted.");      
@@ -261,7 +267,7 @@ namespace PicoStreamPlayer {
     DisplayStatus("Game restored.");
   }
   
-  void save_for_replay(std::string &next_token) {
+  void save_for_replay(std::string next_token) {
     // with current state of touch, this occurs pretty commonly...
     if (next_token == "# Invalid move") return;
     replay_queue.push_back(next_token);    
@@ -269,21 +275,40 @@ namespace PicoStreamPlayer {
   
   // undo last move - replay entire game up to but not including last move...
 
+  void push_undo_token(std::string tbuf) {
+    token_queue.push(tbuf);
+  }
+  
   void undo_last_move() {
-    // flush token queue...
-    while(!token_queue.empty()) token_queue.pop();
-    token_queue.push("new");
-    // copy/remove all replay queue elements to token queue, up to last element...
+    flush_token_queue();
+
+    // 'new' token always starts game...
+    push_undo_token("new");
+    
+    // copy/remove all replay queue elements to token queue, up to last move set...
+    // user move is always followed by cpu move. thus last two moves in replay
+    // queue must be removed to undo a single (last) move...
+    if (replay_queue.size() > 4) {
+      if (replay_queue[replay_queue.size() - 2] == "replaycpumove") {
+	replay_queue.pop_back();
+	replay_queue.pop_back();
+      }
+      if (replay_queue[replay_queue.size() - 2] == "replayusermove") {
+	replay_queue.pop_back();
+	replay_queue.pop_back();
+      }
+    }
+
+    // now move contents of replay queue to the token queue...
     while(!replay_queue.empty()) {
       std::string replay_element = replay_queue.front();
       replay_queue.pop_front();
-      if (replay_queue.empty()) {
-	// skip last move...
-      } else if ( (replay_queue.size() == 1) && (replay_element == "checkmove") ) {
-	// skip user move 'start' token...
-      } else {
-	token_queue.push(replay_element);
-      }
+      if (replay_element == "checkmove") {
+	// skip 'checkmove' (which really shouldn't be in the replay queue!!!)...
+        replay_queue.pop_front(); // remove the move too!	
+	continue;
+      } 
+      push_undo_token(replay_element);
     }
   }
 
@@ -340,6 +365,17 @@ namespace PicoStreamPlayer {
   }
 
   std::string outcome; // for now, no way to restart game
+
+  void move_update(std::string &move_str, bool cpu_move) {
+    // update game board with move...
+    bool king_to_move = KingsMove(move_str.c_str());
+    bool pawn_to_move = PawnsMove(move_str.c_str());
+    MoveChessPiece(move_str.c_str());
+    if (king_to_move)
+      check_for_castling(move_str);
+    else if (pawn_to_move)
+      check_for_pawn_promotion(move_str);
+  }
   
   void to_xboard(std::string tbuf) {
 
@@ -348,37 +384,48 @@ namespace PicoStreamPlayer {
       return;
     }
 
-    size_t found = tbuf.find("\nmove ");
+    size_t found = tbuf.find("Engine move made");
 
     if (found != std::string::npos) {
+      found = tbuf.find("\nmove ");
       // update game board with computers move...
-      std::string cpu_move = tbuf.substr(found + 6,4); 
-      bool king_to_move = KingsMove(cpu_move.c_str());
-      bool pawn_to_move = PawnsMove(cpu_move.c_str());
-      MoveChessPiece(cpu_move.c_str());
-      if (king_to_move)
-	check_for_castling(cpu_move);
-      else if (pawn_to_move)
-        check_for_pawn_promotion(cpu_move);	
+      std::string cpu_move = tbuf.substr(found + 6,4);
+      move_update(cpu_move,true);
       DisplayStatus(("cpu move: " + cpu_move).c_str());
       if (check_for_game_over(outcome,tbuf))
         DisplayStatus(outcome.c_str());
       return;
     }
-
+ 
     found = tbuf.find("checkmove ");
 
     if (found != std::string::npos) {
       // users move has been validated; update game board...
       std::string users_move = tbuf.substr(found + 10,4);
-      bool king_to_move = KingsMove(users_move.c_str());
-      bool pawn_to_move = PawnsMove(users_move.c_str());
-      MoveChessPiece(users_move.c_str());
-      if (king_to_move)
-	check_for_castling(users_move);
-      else if (pawn_to_move)
-        check_for_pawn_promotion(users_move);	
+      move_update(users_move,false);
       DisplayStatus(("user move: " + users_move).c_str()); 
+      if (check_for_game_over(outcome,tbuf))
+        DisplayStatus(outcome.c_str());
+      return;
+    }
+
+    found = tbuf.find("recordusermove ");
+
+    if (found != std::string::npos) {
+      std::string users_move = tbuf.substr(found + 15,4);
+      save_for_replay("replayusermove");
+      save_for_replay(users_move);
+      return;
+    }
+
+    found = tbuf.find("recordcpumove ");
+
+    if (found != std::string::npos) {
+      found = tbuf.find("\nmove ");
+      // update game board with computers move...
+      std::string cpu_move = tbuf.substr(found + 6,4);
+      save_for_replay("replaycpumove");
+      save_for_replay(cpu_move);
       return;
     }
 
@@ -431,8 +478,27 @@ namespace PicoStreamPlayer {
       return;
     }
     
+    found = tbuf.find("# replay cpu move ");
+
     if (found != std::string::npos) {
-      DisplayStatus("User plays black."); 
+      // update game board with computers move...
+      std::string cpu_move = tbuf.substr(found + 18,4);
+      move_update(cpu_move,true);
+      DisplayStatus(("cpu move: " + cpu_move).c_str());
+      if (check_for_game_over(outcome,tbuf))
+        DisplayStatus(outcome.c_str());
+      return;
+    }
+    
+    found = tbuf.find("# replay user move ");
+
+    if (found != std::string::npos) {
+      // update game board with user move...
+      std::string users_move = tbuf.substr(found + 19,4);
+      move_update(users_move,false);
+      DisplayStatus(("user move: " + users_move).c_str()); 
+      if (check_for_game_over(outcome,tbuf))
+        DisplayStatus(outcome.c_str());
       return;
     }
 
