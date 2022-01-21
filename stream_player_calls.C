@@ -388,10 +388,12 @@ namespace PicoStreamPlayer {
 
     if (found != std::string::npos) {
       found = tbuf.find("\nmove ");
-      // update game board with computers move...
-      std::string cpu_move = tbuf.substr(found + 6,4);
-      move_update(cpu_move,true);
-      DisplayStatus(("cpu move: " + cpu_move).c_str());
+      if (found != std::string::npos) {
+        // update game board with computers move...
+        std::string cpu_move = tbuf.substr(found + 6,4);
+        move_update(cpu_move,true);
+        DisplayStatus(("cpu move: " + cpu_move).c_str());
+      }
       if (check_for_game_over(outcome,tbuf))
         DisplayStatus(outcome.c_str());
       return;
