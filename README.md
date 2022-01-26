@@ -1,3 +1,5 @@
+![Chess Box](./images/chessbox.jpg)
+
 line_sweeps.c - display sets of lines by color, sweeping around four
                 corners of display.
 
