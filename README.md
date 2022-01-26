@@ -48,7 +48,7 @@ The _options menu_ is displayed above the chess board. Select an option by first
 5. UNDO - undo the last move made.
 6. NEW - start a new game.
 
-The _restore_ and _undo move_ options work by replaying the current game or a saved games. Makes in interesting _demo_ in its own right.
+The _undo move_ and _restore game_ and options work by replaying the current game or a saved games. Makes an interesting _demo_ in its own right.
 
 Enjoy.
 
