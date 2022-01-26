@@ -329,7 +329,7 @@ namespace PicoStreamPlayer {
   //   move e8g8 - castle, black, kings side   -+
   //   move e8a8 -   "       "    queens side   +- in all cases, gui needs to recognize
   //   move e1g1 -   "     white  kings side    |   castling and update rooks position
-  //   move e1a1 -   "       "    queens side  -+
+  //   move e1c1 -   "       "    queens side  -+
   //***************************************************************************
 
   void check_for_castling(std::string &move) {
