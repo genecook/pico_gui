@@ -9,11 +9,11 @@ Heres a list of the demo programs in this repo:
 
 2. display_bmp.c - display a single (bmp formatted) image on display.
 
-  To create image from jpeg, used ImageMagick 'convert' utility as so:
+  To create image from jpeg, used ImageMagick 'convert' utility as so*:
 
     convert -verbose -resize 240x320! -rotate 180 mcook_designs.jpg md.bmp
 
-  Resolution (240x320) specified for Waveshare 2.8 LCD.
+    *resolution (240x320) specified for Waveshare 2.8 LCD.
 
 3. track_touch.c - track pad example. Most of the vendor supplied track
   panel functions are private (declared static in LCD_Touch.c) and
