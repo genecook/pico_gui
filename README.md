@@ -28,10 +28,10 @@ A quick rundown of the features of this program:
 1. Couples the [Pico Chess](https://github.com/genecook/pico_chess) _chess engine_, along with a GUI _wrapper_ designed for the Waveshare LCD/touch panel.
 2. Supports two levels of play.
 3. Allows the current game state to be saved or retreived to/from flash.
-4. Supports undo-move, new-game.
+4. Supports undo move, new game.
 5. Allows the user the ability to change sides.
 
-Th GUI presents a set of game options across the top of the (lcd) display, a chess board in the center of the display, and a game _console_ across the bottom of the display.
+The GUI presents a set of game options across the top of the (lcd) display, a chess board in the center of the display, and a game _console_ across the bottom of the display.
 
 Start the program running and you are ready to play.
 
@@ -43,7 +43,7 @@ The _options menu_ is displayed above the chess board. Select an option by first
 
 1. SAVE - save the current game to flash storage (the Waveshare LCD/touch panel for the Pico provides a slot for flash, you supply the flash).
 2. REST - restore (load) a game previously saved to flash.
-3. LEVL - change game level (normal, or advanced). The chess engine uses a min-max algorithm. The _normal_ mode uses a three level search; the _advanced_ mode uses a five level search.
+3. LEVL - change game level (normal, or advanced). The chess engine uses a min-max algorithm. The _normal_ mode uses a three level search; the _advanced_ mode uses a five level search. 
 4. SIDE - use this option to switch sides. Note that when you switch sides, the computer will go ahead and make its move.
 5. UNDO - undo the last move made.
 6. NEW - start a new game.
