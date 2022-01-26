@@ -9,9 +9,9 @@ Heres a list of the demo programs in this repo:
 
 2. display_bmp.c - display a single (bmp formatted) image on display.
 
-  To create image from jpeg, used ImageMagick 'convert' utility as so*:
+    To create image from jpeg, used ImageMagick 'convert' utility as so*:
 
-    convert -verbose -resize 240x320! -rotate 180 mcook_designs.jpg md.bmp
+       convert -verbose -resize 240x320! -rotate 180 mcook_designs.jpg md.bmp
 
     *resolution (240x320) specified for Waveshare 2.8 LCD.
 
