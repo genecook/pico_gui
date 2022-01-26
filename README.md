@@ -35,7 +35,7 @@ The GUI presents a set of game options across the top of the (lcd) display, a ch
 
 Start the program running and you are ready to play.
 
-Use a _stylus_, such as a ball-point pen or wooden dowel (I used the wood handle of a small paint brush). Select a chess piece to move, then indicate the square to move the piece to. To _select_ a piece to move, or a destination square, lightly press down on a square. Takes a bit of getting used to. The GUI will then validat the move chosen, the chess _engine_ will then make its move.
+Use a _stylus_, such as a ball-point pen or wooden dowel (I used the wood handle of a small paint brush). Select a chess piece to move, then indicate the square to move the piece to. To _select_ a piece to move, or a destination square, lightly press down on a square. Takes a bit of getting used to. The GUI will then validate the move chosen, the chess _engine_ will then make its move.
 
 Status messages are written to the _console_ below the the chess board.
 
@@ -43,11 +43,14 @@ The _options menu_ is displayed above the chess board. Select an option by first
 
 1. SAVE - save the current game to flash storage (the Waveshare LCD/touch panel for the Pico provides a slot for flash, you supply the flash).
 2. REST - restore (load) a game previously saved to flash.
-3. LEVL - change game level (normal, or advanced). The chess engine uses a min-max algorithm. The _normal_ mode uses a three level search; the _advanced_ mode uses a five level search. 
+3. LEVL - change game level (normal, or advanced). The chess engine uses a min-max algorithm. The _normal_ mode uses a three level traversal; the _advanced_ mode uses a five level traversal. The _advanced_ mode plays a pretty good game of chess, but is pretty slow. 
 4. SIDE - use this option to switch sides. Note that when you switch sides, the computer will go ahead and make its move.
 5. UNDO - undo the last move made.
 6. NEW - start a new game.
 
+The _restore_ and _undo move_ options work by replaying the current game or a saved games. Makes in interesting _demo_ in its own right.
+
+Enjoy.
 
 
 
