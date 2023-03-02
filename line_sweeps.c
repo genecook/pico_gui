@@ -12,8 +12,17 @@
 // example pico lcd program - 'sweep' lines of different colors from corners...
 //****************************************************************************************
 
+//#define LCD_2_8
+#define LCD_3_5
+
+#ifdef LCD_3_5
+// # of pixels in X, Y direction for Waveshare Pico-ResTouch-LCD-3.5:
+#define X_PIXELS 480
+#else
 // # of pixels in X, Y direction for Waveshare Pico-ResTouch-LCD-2.8:
 #define X_PIXELS 240
+#endif
+
 #define Y_PIXELS 320
 
 typedef enum { LEFT_UPPER_CORNER = 0,

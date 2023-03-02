@@ -1,22 +1,22 @@
 cmake_minimum_required(VERSION 3.13)
 
-# PICO_SDK_PATH shell variable must be set before running cmake:
-#   export PICO_SDK_PATH=~/Desktop/pico-sdk
-#   export PICO_EXAMPLES=~/Desktop/pico-examples
-#
-#   export PICO_CHESS=~/Desktop/pico_chess
+# shell variables that must be set before running cmake:
+#   PROJECTS           - my projects dir
+#   PICO_SDK_PATH      - pico sdk checked out to here
+#   PICO_EXAMPLES_PATH - pico examples checked out to here
+#   PICO_LCD_LIB       - Waveshare LCD code unpacked here
 
-set(CMAKE_MODULE_PATH $ENV{PICO_SDK_PATH} $ENV{PICO_EXAMPLES})
+set(CMAKE_MODULE_PATH $ENV{PICO_SDK_PATH} $ENV{PICO_EXAMPLES_PATH})
 
 include(pico_sdk_import)
 
 # use shell variable and/or update this path to reflect where you
 # have unpacked the Waveshare LCD code:
 
-set(PICO_LCD_LIB $ENV{HOME}/Desktop/pico/Pico-ResTouch-LCD-X_X_Code/c)
-set(PICO_CHESS $ENV{HOME}/Desktop/pico_chess)
+set(PICO_LCD_LIB $ENV{PICO_LCD_LIB})
 
-set(PICO_CHESS_GUI $ENV{HOME}/Desktop/pico_gui)
+set(PICO_CHESS $ENV{PROJECTS_PATH}/pico_chess)
+set(PICO_CHESS_GUI $ENV{PROJECTS_PATH}/pico_gui)
 
 project(my_gui C CXX ASM)
 
