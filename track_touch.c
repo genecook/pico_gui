@@ -14,13 +14,14 @@
 
 void InitTouchPanel( LCD_SCAN_DIR Lcd_ScanDir );
 void ReadTouch(POINT *x, POINT *y);
+bool ReadTouchEvent(POINT *x, POINT *y, bool return_raw_coordinates);
 
 int main(void)
 {
     System_Init(); //System intialize, configure serial port and SPI interface...
     SD_Init(); 
 
-    LCD_SCAN_DIR lcd_scan_dir = SCAN_DIR_DFT; //Set the scanmode 
+    LCD_SCAN_DIR lcd_scan_dir = L2R_U2D; //SCAN_DIR_DFT - Set the scanmode 
     LCD_Init(lcd_scan_dir,800); // Initialize LCD panel,
                                 //   confirm the scan mode and the brightness
     
@@ -40,12 +41,30 @@ int main(void)
     char tbuf[128];
     sFONT* TP_Font = &Font16;
     
+    POINT maxX = 0,minX = 9999, maxY = 0,minY = 9999;
+
     while(1) {
       POINT x,y;
-      ReadTouch(&x, &y);
+      bool good_read = ReadTouchEvent(&x, &y, false);
+
+      if (!good_read) {
+        continue;
+      }
+
+      if (x > maxX) maxX = x;
+      else if (x < minX) minX = x;
+      if (y > maxY) maxY = y;
+      else if (y < minY) minY = y;
+
       GUI_DrawPoint(x, y, WHITE, DOT_PIXEL_2X2 , DOT_FILL_AROUND);
-      sprintf(tbuf,"x/y: %d/%d ",x,y);
+
+      // now post touch coordinate info...
+      sprintf(tbuf,"x/y: %04d/%04d   ",x,y);
       GUI_DisString_EN(10,10,tbuf,TP_Font, BLACK, WHITE);
+      sprintf(tbuf,"x min/max: %04d/%04d   ",minX,maxX);
+      GUI_DisString_EN(10,30,tbuf,TP_Font, BLACK, WHITE);
+      sprintf(tbuf,"y min/max: %04d/%04d   ",minY,maxY);
+      GUI_DisString_EN(10,50,tbuf,TP_Font, BLACK, WHITE);
     }
     
     return 0;

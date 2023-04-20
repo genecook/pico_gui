@@ -14,7 +14,7 @@
 void InitTouchPanel( LCD_SCAN_DIR Lcd_ScanDir );
 void ReadTouch(POINT *x, POINT *y);
 
-LCD_SCAN_DIR lcd_scan_dir = SCAN_DIR_DFT; // scanmode 
+LCD_SCAN_DIR lcd_scan_dir = SCAN_DIR_DFT; // scanmode L2R_U2D
 LCD_SCAN_DIR bmp_scan_dir = D2U_R2L;      // LCD type
 
 //***********************************************************************

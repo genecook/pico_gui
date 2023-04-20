@@ -21,12 +21,42 @@ static TP_DRAW sTP_Draw;
 function:
                 Use the default calibration factor
 *******************************************************************************/
+
 void my_TP_GetAdFac(void)
 {
-  sTP_DEV.fXfac = 0.066626;
-  sTP_DEV.fYfac = 0.089779 ;
-  sTP_DEV.iXoff = -20 ;
-  sTP_DEV.iYoff = -34 ;
+    if (LCD_2_8==id) {
+        sTP_DEV.fXfac = 0.066626;
+        sTP_DEV.fYfac = 0.089779 ;
+        sTP_DEV.iXoff = -20 ;
+        sTP_DEV.iYoff = -34 ;
+    } else {
+        if (sTP_DEV.TP_Scan_Dir == D2U_L2R ) { //SCAN_DIR_DFT = D2U_L2R
+            sTP_DEV.fXfac = -0.132443 ;
+            sTP_DEV.fYfac = 0.089997 ;
+            sTP_DEV.iXoff = 516 ;
+            sTP_DEV.iYoff = -22 ;         
+        } else if( sTP_DEV.TP_Scan_Dir == L2R_U2D ) {
+            sTP_DEV.fXfac = 0.089697 ;
+            sTP_DEV.fYfac = 0.134792 ; 
+            sTP_DEV.iXoff = -21 ;         
+            sTP_DEV.iYoff = -39 ;
+        } else if( sTP_DEV.TP_Scan_Dir == R2L_D2U ) {
+            sTP_DEV.fXfac = 0.089915 ;
+            sTP_DEV.fYfac =  0.133178 ;
+            sTP_DEV.iXoff = -22 ;
+            sTP_DEV.iYoff = -38 ;
+        } else if( sTP_DEV.TP_Scan_Dir == U2D_R2L ) {
+            sTP_DEV.fXfac = -0.132906 ;
+            sTP_DEV.fYfac = 0.087964 ;
+            sTP_DEV.iXoff = 517 ;
+            sTP_DEV.iYoff = -20 ; 
+        } else {
+            LCD_Clear(LCD_BACKGROUND);
+            GUI_DisString_EN(0, 60, "Does not support touch-screen \
+                            calibration in this direction",
+                            &Font16, FONT_BACKGROUND, RED);
+        }   
+    }
 }
 /*******************************************************************************
 function:
@@ -155,13 +185,51 @@ bool TP_Read_TwiceADC(uint16_t *pXCh_Adc, uint16_t  *pYCh_Adc )
 //****************************************************************************
 // read from touch panel, return X,Y coordinates...
 //****************************************************************************
-void ReadTouch(POINT *x, POINT *y) {
-  DEV_Digital_Read(TP_IRQ_PIN);
-      TP_Read_TwiceADC(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint);
-      sTP_Draw.Xpoint = sLCD_DIS.LCD_Dis_Column - sTP_DEV.fXfac * sTP_DEV.Xpoint - sTP_DEV.iXoff;
-      sTP_Draw.Ypoint = sLCD_DIS.LCD_Dis_Page   - sTP_DEV.fYfac * sTP_DEV.Ypoint - sTP_DEV.iYoff;
 
-      *x = sTP_Draw.Xpoint;
-      *y = sTP_Draw.Ypoint;
+bool ReadTouchEvent(POINT *x, POINT *y, bool return_raw_coordinates);
+
+void ReadTouch(POINT *x, POINT *y) {
+    ReadTouchEvent(x,y,false); // but probably not for the 3.5" lcd with touch)
+}
+
+// return true if good read of touch...
+
+bool ReadTouchEvent(POINT *x, POINT *y, bool return_raw_coordinates) {
+    if (DEV_Digital_Read(TP_IRQ_PIN)) {
+        return false; // problem with read?
+    }
+
+    // read the current stylus position, raw touch panel coordinates...
+    if (!TP_Read_TwiceADC(&sTP_DEV.Xpoint, &sTP_DEV.Ypoint)) {
+        return false; // read errors?
+    }
+
+    if (return_raw_coordinates) {
+        // return the touch panel 'raw' coordinate values only...
+        *x = sTP_DEV.Xpoint;
+        *y = sTP_DEV.Ypoint;
+    } else if (id == LCD_2_8) {
+        // return screen coordinates - LCD 2.8 only...
+        *x = sLCD_DIS.LCD_Dis_Column - sTP_DEV.fXfac * sTP_DEV.Xpoint - sTP_DEV.iXoff;
+        *y = sLCD_DIS.LCD_Dis_Page   - sTP_DEV.fYfac * sTP_DEV.Ypoint - sTP_DEV.iYoff;
+    } else if (sTP_DEV.TP_Scan_Dir == R2L_D2U) {
+        // screen coordinates, 'scanning' right to left, down to up...
+        *x = sTP_DEV.fXfac * sTP_DEV.Xpoint + sTP_DEV.iXoff;
+        *y = sTP_DEV.fYfac * sTP_DEV.Ypoint + sTP_DEV.iYoff;
+    } else if (sTP_DEV.TP_Scan_Dir == U2D_R2L) {
+        // screen coordinates, 'scanning' up to down, right to left...
+        *x = sTP_DEV.fXfac * sTP_DEV.Ypoint + sTP_DEV.iXoff;
+        *y = sTP_DEV.fYfac * sTP_DEV.Xpoint + sTP_DEV.iYoff;
+    } else if (sTP_DEV.TP_Scan_Dir == L2R_U2D) {
+        // screen coordinates, 'scanning' left to right, up to down...
+        *x = sLCD_DIS.LCD_Dis_Column - sTP_DEV.fXfac * sTP_DEV.Xpoint - sTP_DEV.iXoff;
+        *y = sLCD_DIS.LCD_Dis_Page   - sTP_DEV.fYfac * sTP_DEV.Ypoint - sTP_DEV.iYoff;
+    } else {
+        // screen coordinates, 'scanning' down to up, left to right...
+        *x = sLCD_DIS.LCD_Dis_Column - sTP_DEV.fXfac * sTP_DEV.Ypoint - sTP_DEV.iXoff;
+        *y = sLCD_DIS.LCD_Dis_Page   - sTP_DEV.fYfac * sTP_DEV.Xpoint - sTP_DEV.iYoff;
+    }
+
+    return true;
 }
 
