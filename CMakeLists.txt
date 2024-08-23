@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.13)
 #   PICO_EXAMPLES_PATH - pico examples checked out to here
 #   PICO_LCD_LIB       - Waveshare LCD code unpacked here
 
-set(CMAKE_MODULE_PATH $ENV{PICO_SDK_PATH} $ENV{PICO_EXAMPLES_PATH})
+set(CMAKE_MODULE_PATH $ENV{PICO_SDK_PATH} $ENV{PICO_EXAMPLES})
 
 include(pico_sdk_import)
 

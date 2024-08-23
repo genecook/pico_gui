@@ -1,8 +1,15 @@
 ![Chess Box](./images/chessbox.jpg)
 
-Using Waveshare 2.8 LCD/touch panel, as configured for Raspberry Pi Pico,
+Using Waveshare 2.8 LCD/touch panel*, as configured for Raspberry Pi Pico,
 along with Waveshare UPS, also configured for the Pico.
 
+*NOTE: Heres how to get the c/c++ support libraries for the Waveshare 2.8 LCD:
+  1. In web browser cd to https://www.waveshare.com/wiki/Pico-ResTouch-LCD-2.8#Documents
+  2. Click on Examples link under Demo Codes section
+     (zip file Pico-ResTouch-LCD-X_X_Code.zip will download to ~/Downloads dir)
+  3. cd to where you want to unpack the Waveshare code.
+  4. Unpack the code: unzip ~/Downloads/Pico-ResTouch-LCD-X_X_Code.zip
+  
 Heres a list of the demo programs in this repo:
 
 1. line_sweeps.c - display sets of lines by color, sweeping around four corners of display.

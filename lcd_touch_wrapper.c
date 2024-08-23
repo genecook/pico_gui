@@ -20,7 +20,7 @@ void ReadTouch(POINT *x, POINT *y);
   LCD_SCAN_DIR lcd_scan_dir = SCAN_DIR_DFT;
 #endif
 
-LCD_SCAN_DIR bmp_scan_dir = D2U_R2L;      // LCD type
+LCD_SCAN_DIR bmp_scan_dir = U2D_R2L; /*D2U_R2L;*/      // LCD type
 
 //***********************************************************************
 // c wrapper functions for accessing lcd/touch...
